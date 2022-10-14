@@ -24,10 +24,10 @@ class Mailer
 		*//*		*/
 		require 'phpmailer/PHPMailerAutoload.php';
 		$mail = new PHPMailer;
-
+		$mail->SMTPDebug = 2;
 		$mail->isSMTP();
-		$mail->SMTPAuth = true;                              // Set mailer to use SMTP
-		$mail->Host = '192.168.16.35';  // Specify main and backup SMTP servers
+		$mail->SMTPAuth = true;                              	// Set mailer to use SMTP
+		$mail->Host = '192.168.16.35';  								// Specify main and backup SMTP servers
 		$mail->SMTPSecure = 'TLS';                            // Enable TLS encryption, `ssl` also
 		$mail->Port = 25;
 		foreach ($mailerfr as $key_fr => $values_fr) {
@@ -53,14 +53,16 @@ class Mailer
 		$mail->Password = $password;
 		$mail->setFrom($userfrm);
 
-
 		foreach ($mailerto as $key => $values) {
 			foreach ($values as $email => $user_email) {
-				// $mail->addAddress($user_email);
-				$mail->addAddress("marvin.orsua@ever.ph");
+
+				// die();
+				$mail->addAddress($user_email);
+				// $mail->addAddress("marvin.orsua@ever.ph", "Marvin");
 				//var_dump(PHPMailer::validateAddress($user_email));
 			}
 		}
+		// die();
 
 
 		$mail->addCC($userfrm);
@@ -173,6 +175,8 @@ class Mailer
 
 	public function mailformat_approve($name, $type, $datefiled, $controlno, $br_name, $effdate, $reason, $mailerfr, $mailerto, $req_stat)
 	{
+
+
 
 
 		require 'phpmailer/PHPMailerAutoload.php';
@@ -353,7 +357,8 @@ class Mailer
 
 	public function get_recipient($param1)
 	{
-		$sql_recipient = "select email, '2' as sequence from dbo.hris_mainLogIn where temp_pass in (select approver_empno from ref_hris_approver where emp_no = '{$param1}' and approver_empno <> '9900066' and is_approver = 1);";
+		// $sql_recipient = "select email, '2' as sequence from dbo.hris_mainLogIn where temp_pass in (select approver_empno from ref_hris_approver where emp_no = '{$param1}' and approver_empno <> '9900066' and is_approver = 1);";
+		$sql_recipient = "select email from dbo.hris_mainLogIn where temp_pass in (select approver_empno from ref_hris_approver where emp_no = '{$param1}' and approver_empno <> '9900066' and is_approver = 1);";
 		// $rs_recipient = mssql_query($sql_recipient);
 		// $nm_row = mssql_num_rows($rs_recipient);
 		$rs_recipient = sqlsrv_query($this->conn, $sql_recipient);
@@ -364,7 +369,7 @@ class Mailer
 				$email_recipient[] = $row_recipient;
 			}
 			// mssql_free_result($rs_recipient);
-			// sqlsrv_free_stmt($rs_recipient);
+			sqlsrv_free_stmt($rs_recipient);
 			return $email_recipient;
 		} else {
 			return false;

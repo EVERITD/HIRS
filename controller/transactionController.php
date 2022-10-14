@@ -51,10 +51,12 @@ if ($_SERVER['HTTP_AUTORIZATION']) {
       } else {
          $query_lrs = "SELECT lrs_desc from ref_emp_request_type  where lrs_type like '" . $authorized . "'";
          $stmt_lrs = sqlsrv_query($conn, $query_lrs);
-         $leave_name  = "";
          $lrs_desc = new Standard("");
          if (sqlsrv_fetch($stmt_lrs)) {
-            $leave_name = $lrs_desc->bindMetaData($stmt);
+
+            $leave_name = $lrs_desc->bindMetaData($stmt_lrs);
+            // var_dump(sqlsrv_field_metadata($stmt_lrs));
+
          } else {
             return false;
          }
@@ -118,19 +120,22 @@ if ($_SERVER['HTTP_AUTORIZATION']) {
 
                //------------SENDING MAIL AS FOR OLD CODE----------------
 
+
+
                try {
                   $Mailer = new Mailer();
                   $mailer_from = $Mailer->get_sender($emp_no);
                   $mailer_to = $Mailer->get_recipient($emp_no);
-                  var_dump($Mailer->mailformat_request($emp_no,  $emp_name, $leave_name, $date_filed, $controlno,  $department, $br_name, $lceff_date, $reason, $mailer_from, $mailer_to));
+                  $test_mail_to['email'] = "marvin.orsua@ever.ph";
+                  // var_dump($mailer_to);
+                  // die();
+                  $Mailer->mailformat_request($emp_no,  $emp_name, $leave_name, $date_filed, $controlno,  $department, $br_name, $lceff_date, $reason,  $mailer_from, $$test_mail_to);
                } catch (\Throwable $th) {
                   var_dump($th);
                }
 
                // var_dump($mailer->mailformat_request($emp_no,  $emp_name, $leave_name, $date_filed, $controlno,  $department, $br_name, $lceff_date, $reason, $mailer_from, $mailer_to));
-               die();
                // ---------------------------------------------------------
-
 
                $response['status'] = '200';
                $response['error'] = false;

@@ -160,7 +160,7 @@ class Standard
    function nextControlNumber($module)
    {
       try {
-         $query = "UPDATE ref_controlno SET    controlno = controlno + 1 WHERE  module_code = '" . $module . "'";
+         $query = "UPDATE ref_controlno SET  controlno = controlno + 1 WHERE  module_code = '" . $module . "'";
          $stmt = sqlsrv_query($this->conn, $query);
          if ($stmt) {
             return true;
