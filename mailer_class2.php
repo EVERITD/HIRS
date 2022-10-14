@@ -30,6 +30,13 @@ class Mailer
 		$mail->Host = '192.168.16.35';  								// Specify main and backup SMTP servers
 		$mail->SMTPSecure = 'TLS';                            // Enable TLS encryption, `ssl` also
 		$mail->Port = 25;
+		$mail->SMTPOptions = array(
+			'ssl' => array(
+				'verify_peer' => false,
+				'verify_peer_name' => false,
+				'allow_self_signed' => true
+			)
+		);
 		foreach ($mailerfr as $key_fr => $values_fr) {
 			foreach ($values_fr as $email_fr => $user_email_fr) {
 				$userfrm = trim($user_email_fr);

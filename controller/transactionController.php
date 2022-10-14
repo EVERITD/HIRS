@@ -39,7 +39,7 @@ if ($_SERVER['HTTP_AUTORIZATION']) {
       $stmt_approver = sqlsrv_query($conn, $query_approver);
 
 
-      //Check LOA dates from and to, if already filed
+      //----------------Check LOA dates from and to, if already filed-------------------
       $query_dates = "select *,case when date_from = date_to then ltrim(rtrim(convert(char(10),date_from,101))) else ltrim(rtrim(convert(char(10),date_from,101)))+' to '+ltrim(rtrim(convert(char(10),date_to,101))) end as daterec from emp_request_master where emp_no = '" . $emp_no . "' and leavestatusid in (1,2,3,4,7) and (convert(char(8),(CONVERT(DATETIME,'" . $datefrom . "',111)),112) between convert(char(8),date_from,112) and convert(char(8),date_to,112) or convert(char(8),(CONVERT(DATETIME,'" . $dateto . "',111)),112) between convert(char(8),date_from,112) and convert(char(8),date_to,112))";
       $stmt_loa = sqlsrv_query($conn, $query_dates);
       $leave_name = "";
@@ -53,10 +53,7 @@ if ($_SERVER['HTTP_AUTORIZATION']) {
          $stmt_lrs = sqlsrv_query($conn, $query_lrs);
          $lrs_desc = new Standard("");
          if (sqlsrv_fetch($stmt_lrs)) {
-
             $leave_name = $lrs_desc->bindMetaData($stmt_lrs);
-            // var_dump(sqlsrv_field_metadata($stmt_lrs));
-
          } else {
             return false;
          }
@@ -71,13 +68,13 @@ if ($_SERVER['HTTP_AUTORIZATION']) {
             $response['message'] = "Date's already filed, please select new date's!";
          } else {
 
-            // CREATING LEAVE OF ABSENCE REQUEST
 
-            //GenerateControllNumber
+
+            //-----------GenerateControllNumber-------------
             $GCN = new Standard("");
             $controlno = $GCN->generateControlNumber('CS');
             $controlno = $controlno['controlno'];
-            //
+            //----------------------------------------------
 
             $loa_params['controlno'] = $controlno;
             $loa_params['emp_no'] = $emp_no;
@@ -95,18 +92,23 @@ if ($_SERVER['HTTP_AUTORIZATION']) {
             $loa_params['audit_date'] = '';
             $loa_params['ispis'] =  '0';
 
+            //------------CREATING LEAVE OF ABSENCE REQUEST-----------
             $Insertion = new Standard("emp_request_master");
             $resultLOA = $Insertion->inserData($loa_params);
+            //--------------------------------------------------------
+
             if (!$resultLOA) {
                $response['status'] = '503';
                $response['error'] = true;
                $response['message'] = "Unable to save request, please try again later";
             } else {
-               //UPDATE CONTROL NUMBER SCQ
+               //-----------------UPDATE CONTROL NUMBER SQ-------------------
                $clsControlNo = new Standard("");
                $stat_control_no = $clsControlNo->nextControlNumber('CS');
-               ////
+               //-------------------------------------------------------------
 
+
+               //-----------------GETTING USED CONTROL #-------------------
                $cControlNo = new Standard("");
                $queryC = "select 'CS'+right('00000000'+(select ltrim(rtrim(str(controlno))) from ref_controlno where module_code = 'CS'),8) as controlno";
                $stmt_queryC = sqlsrv_query($conn, $queryC);
@@ -114,27 +116,22 @@ if ($_SERVER['HTTP_AUTORIZATION']) {
                   $controlno = $cControlNo->bindMetaData($stmt_queryC);
                   $controlno =  $controlno['controlno'];
                }
-               $date_filed = date('Y-m-d');
-               $lceff_date = ($datefrom == $dateto) ? $datefrom : $datefrom . ' &mdash; ' . $dateto;
-
+               //
 
                //------------SENDING MAIL AS FOR OLD CODE----------------
 
-
+               $date_filed = date('Y-m-d');
+               $lceff_date = ($datefrom == $dateto) ? $datefrom : $datefrom . ' &mdash; ' . $dateto;
 
                try {
                   $Mailer = new Mailer();
                   $mailer_from = $Mailer->get_sender($emp_no);
                   $mailer_to = $Mailer->get_recipient($emp_no);
-                  $test_mail_to['email'] = "marvin.orsua@ever.ph";
-                  // var_dump($mailer_to);
-                  // die();
-                  $Mailer->mailformat_request($emp_no,  $emp_name, $leave_name, $date_filed, $controlno,  $department, $br_name, $lceff_date, $reason,  $mailer_from, $$test_mail_to);
+                  $test_mail_to[0]['email'] = "marvin.orsua@ever.ph";
+                  $Mailer->mailformat_request($emp_no,  $emp_name, $leave_name['lrs_desc'], $date_filed, $controlno,  $department, $br_name, $lceff_date, $reason,  $mailer_from, $test_mail_to);
                } catch (\Throwable $th) {
                   var_dump($th);
                }
-
-               // var_dump($mailer->mailformat_request($emp_no,  $emp_name, $leave_name, $date_filed, $controlno,  $department, $br_name, $lceff_date, $reason, $mailer_from, $mailer_to));
                // ---------------------------------------------------------
 
                $response['status'] = '200';
