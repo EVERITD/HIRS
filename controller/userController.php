@@ -405,6 +405,10 @@ if ($_POST['action'] == "getrequests") {
    }
    $response = $data;
 }
+if ($_POST['action'] == "getLeaves") {
+   var_dump($_POST);
+   die();
+}
 
 function converttime($rawTime)
 {

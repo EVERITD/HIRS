@@ -82,23 +82,44 @@
             "action": "getattendance"
          },
          "success": (response) => {
-            response.forEach(item => {
-               let newDate = new Date(item['date'])
+            if (response.length == 0) {
                attendanceTable.row.add([
-                  `<p style="font-weight:bold; font-size:10px!important;"> ${getDay(newDate.getDay())} </p>`,
-                  item['date'],
-                  item['in1'],
-                  item['out1'],
-                  item['in2'],
-                  item['out2'],
-                  item['in3'],
-                  item['out3'],
-                  item['in4'],
-                  item['out4'],
-                  item['status'] ? item['status'] : '-',
+                  '-',
+                  '-',
+                  '-',
+                  '-',
+                  '-',
+                  '-',
+                  '-',
+                  '-',
+                  '-',
+                  '-',
+                  '-'
 
                ]).draw(false)
-            });
+            } else {
+               response.forEach(item => {
+                  let newDate = new Date(item['date'])
+                  attendanceTable.row.add([
+                     `<p style="font-weight:bold; font-size:10px!important;"> ${getDay(newDate.getDay())} </p>`,
+                     item['date'],
+                     item['in1'],
+                     item['out1'],
+                     item['in2'],
+                     item['out2'],
+                     item['in3'],
+                     item['out3'],
+                     item['in4'],
+                     item['out4'],
+                     item['status'] ? item['status'] : '-',
+
+                  ]).draw(false)
+               });
+            }
+
+         },
+         "error": (err) => {
+            console.log(err)
          }
       }
    });

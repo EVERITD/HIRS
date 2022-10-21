@@ -55,14 +55,13 @@
       let remarks = $('textarea[name="txtRemarks"]').val();
       let endDate = $('#dates').data('daterangepicker').endDate.format("YYYY-MM-DD");
       let startDate = $('#dates').data('daterangepicker').startDate.format("YYYY-MM-DD");
-      let token = $('#token').html()
       let empno = $('#emp_no').html()
       let log_name = $('#log_name').html()
 
       const response = await fetch("../controller/transactionController.php", {
          headers: {
             'Content-type': 'application/x-www-form-urlencoded',
-            'Autorization': `Bearer ${token}`
+            'Autorization': `Bearer ${$('#token').html()}`
          },
          method: 'POST',
          body: `action=LeaveOfAbsence&remarks=${remarks}&dtefrm=${startDate}&dteto=${endDate}&isAuthorized=LOAA&request_type=leave_of_absence`

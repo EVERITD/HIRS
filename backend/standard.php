@@ -148,7 +148,7 @@ class Standard
    }
    function generateControlNumber($module)
    {
-      $query = "SELECT 'CS' + RIGHT('00000000'+(SELECT Ltrim(Rtrim(Str(controlno+1))) FROM ref_controlno WHERE module_code = '" . $module . "'), 8) as controlno";
+      $query = "SELECT '$module' + RIGHT('00000000'+(SELECT Ltrim(Rtrim(Str(controlno+1))) FROM ref_controlno WHERE module_code = '" . $module . "'), 8) as controlno";
       $stmt = sqlsrv_query($this->conn, $query);
       if (sqlsrv_fetch($stmt)) {
          return  $this->bindMetaData($stmt);

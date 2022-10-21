@@ -109,6 +109,7 @@
 <script>
    // getpostedtransactions()
    async function getpostedtransactions() {
+      getEmployeeLeaves()
       const response = await fetch("../controller/userController.php", {
          headers: {
             'Content-type': 'application/x-www-form-urlencoded'
@@ -125,5 +126,20 @@
          $('#pl').html(data['pl'])
          $('#ml').html(data['ml'])
       }
+
+   }
+
+
+   async function getEmployeeLeaves() {
+      const response = await fetch("", {
+         method: 'POST',
+         headers: {
+            'Content-type': 'application/x-www-form-urlencoded'
+         },
+         body: `empno=${$('#emp_no').html()}&action=getLeaves`
+      })
+      const data = await response.json()
+
+      console.log(data)
    }
 </script>

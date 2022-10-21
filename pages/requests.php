@@ -28,16 +28,16 @@
    </div>
    <div class="col">
       <?php require '../components/navbar.php'; ?>
-      <div class="container" style="height:calc(100vh - 50px);overflow-y:scroll!important;padding:5px 2rem">
+      <div class="container" style="height:calc(100vh - 60px);overflow-y:scroll!important;padding:5px 2rem">
          <table style="font-size: 11px;font-weight:bold;padding: 1rem 0; " class="row-border" id="table_id">
             <thead>
                <tr style="background-color: #b82525;color:white; letter-spacing: 1px">
                   <th style="width:50px;">Control #</th>
-                  <th style="width:90px;">Date Created</th>
-                  <th style="width:150px;">Effective Date</th>
+                  <th style="width:85px;">Date Created</th>
+                  <th style="width:100px;">Effective Date</th>
                   <th style="width:200px;">Particular</th>
                   <th style="width:150px;">Type</th>
-                  <th>Approved Date</th>
+                  <th>Appr. Date</th>
                   <th>Status</th>
                   <th style="width:20px;">Action</th>
                </tr>
@@ -54,7 +54,7 @@
    let requestTable = $('#table_id').DataTable({
       ordering: false,
       searching: false,
-      pageLength: 8,
+      pageLength: 10,
       bLengthChange: false,
       "ajax": {
          "url": "../controller/userController.php",
@@ -68,7 +68,6 @@
             response.forEach(item => {
                let newDate = new Date(item['date'])
                let status = item['leavestatus'];
-               console.log(item);
                requestTable.row.add([
                   `<p style="font-weight:bold;font-size:10px!important;">${item['controlno']}</p>`,
                   item['encoded_date'] ? item['encoded_date'] : '-',
@@ -80,6 +79,20 @@
                   '-',
                ]).draw(false)
             });
+         },
+         "error": (err) => {
+            console.log(err)
+            requestTable.row.add([
+               `-`,
+               '-',
+               '-',
+               '-',
+               '-',
+               '-',
+               '-',
+               '-',
+            ]).draw(false)
+
          }
       }
    });

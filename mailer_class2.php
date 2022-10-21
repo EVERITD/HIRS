@@ -24,7 +24,7 @@ class Mailer
 		*//*		*/
 		require 'phpmailer/PHPMailerAutoload.php';
 		$mail = new PHPMailer;
-		$mail->SMTPDebug = 2;
+		$mail->SMTPDebug = 0;
 		$mail->isSMTP();
 		$mail->SMTPAuth = true;                              	// Set mailer to use SMTP
 		$mail->Host = '192.168.16.35';  								// Specify main and backup SMTP servers
