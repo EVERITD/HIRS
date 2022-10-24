@@ -708,7 +708,6 @@ if ($_SERVER['HTTP_AUTORIZATION']) {
                         echo json_encode($response);
                      } else {
 
-
                         $GCN = new Standard("");
                         $controlno = $GCN->generateControlNumber('CS');
                         $controlno = $controlno['controlno'];
@@ -728,15 +727,22 @@ if ($_SERVER['HTTP_AUTORIZATION']) {
 
                         if ($xcontinue) {
 
+
+                           //--------------------OT UPDATE------------------------------
+                           $query = "UPDATE ot_file  SET isused = 1, used_un_hrs = remain_hrs, remain_hrs = 0 where controlno = '" .  $data['ot_code'] . "' and emp_no = '" . $employee['emp_no'] . "'";
+                           $query_stmt = sqlsrv_query($conn, $query);
+                           // ----------------------------------------------------------
+
+
+
                            //-----------------UPDATE CONTROL NUMBER SQ-------------------
                            $clsControlNo = new Standard("");
-                           $stat_control_no = $clsControlNo->nextControlNumber('UN');
+                           $stat_control_no = $clsControlNo->nextControlNumber('CS');
                            //-------------------------------------------------------------
-
 
                            //-----------------GETTING USED CONTROL #-------------------
                            $cControlNo = new Standard("");
-                           $queryC = "select 'UN'+right('00000000'+(select ltrim(rtrim(str(controlno))) from ref_controlno where module_code = 'UN'),8) as controlno";
+                           $queryC = "select 'CS'+right('00000000'+(select ltrim(rtrim(str(controlno))) from ref_controlno where module_code = 'CS'),8) as controlno";
                            $stmt_queryC = sqlsrv_query($conn, $queryC);
                            if (sqlsrv_fetch($stmt_queryC)) {
                               $controlno = $cControlNo->bindMetaData($stmt_queryC);
@@ -766,7 +772,6 @@ if ($_SERVER['HTTP_AUTORIZATION']) {
                $response['message'] = "Unable to retrieve data, Please try again. If this error persist please contact the administrator.";
                echo json_encode($response);
             }
-            die();
          } else {
             $response['error'] = true;
             $response['status'] = 503;
@@ -804,11 +809,416 @@ if ($_SERVER['HTTP_AUTORIZATION']) {
          $response['status'] = 503;
          $response['data'] = $OT_control;
       }
+      if ($_POST['action'] == "CHANGEOFWORKSCHED") {
+         $data = $_POST['data'];
+
+         $params['off_dat_off'] = date_format(date_create($data['off_dat_off'] ? $data['off_dat_off'] : $data['off_dat_off']), "m/d/Y");
+         $params['timein'] = str_replace(":", ".", $data['timein']);
+         $params['timeout'] = str_replace(":", ".", $data['timeout']);
+         $params['lunchbreak_in'] = str_replace(":", ".", $data['lunchbreak_in']);
+         $params['lunchbreak_out'] = str_replace(":", ".", $data['lunchbreak_out']);
+         $params['coffee_in'] = str_replace(":", ".", $data['coffee_in']);
+         $params['coffee_out'] = str_replace(":", ".", $data['coffee_out']);
+         $params['effective_date'] =  date_format(date_create($data['date'] ? $data['date'] : $data['eff_date']), "m/d/Y");
+         $params['remarks'] = $data['remarks'];
+         $employee = extractEmployee($conn, $MAIN_TOKEN);
+         if (!$employee) {
+            $response['error'] = true;
+            $response['status'] = 503;
+            $response['message'] = "Token Unrecognized!.";
+            echo json_encode($response);
+            die();
+         }
+
+         switch ($data['reqtype']) {
+            case 'RS':
+               $lrs_cls = new Standard("");
+               $queryLName = "select lrs_desc from ref_lrs_type where lrs_type like 'CHA'";
+               $stmt_lname = sqlsrv_query($conn, $queryLName);
+               if (sqlsrv_fetch($stmt_lname)) {
+                  $leave_name = $lrs_cls->bindMetaData($stmt_lname);
+               }
+               var_dump($employee);
+               die();
+               $GCN = new Standard("");
+               $controlno = $GCN->generateControlNumber('CW');
+               $controlno = $controlno['controlno'];
+               $xcontinue = false;
+
+               //-----------------UPDATE CONTROL NUMBER SQ-------------------
+               $clsControlNo = new Standard("");
+               $stat_control_no = $clsControlNo->nextControlNumber('CW');
+               //-------------------------------------------------------------
+
+               //-----------------GETTING USED CONTROL #-------------------
+               $cControlNo = new Standard("");
+               $queryC = "select 'CW'+right('00000000'+(select ltrim(rtrim(str(controlno))) from ref_controlno where module_code = 'CW'),8) as controlno";
+               $stmt_queryC = sqlsrv_query($conn, $queryC);
+               if (sqlsrv_fetch($stmt_queryC)) {
+                  $controlno = $cControlNo->bindMetaData($stmt_queryC);
+                  $controlno =  $controlno['controlno'];
+               }
+
+               $query_insert  = "insert into emp_request_master (controlno,emp_no,lrs_type,date_from,date_to,leavestatusid,reason,encoded_by, encoded_date,isapproved,approved_by,approved_date,audit_user,audit_date,ispis) select '" . $controlno . "','" . $employee['emp_no'] . "','CHA','" .  $params['effective_date'] . "','" .  $params['effective_date'] . "',1,'" . $lcRem . "','" . strtolower($employee['logname']) . "',getdate(),'0','---', NULL,'---',NULL,'0' ";
+               $stmt_insert = sqlsrv_query($conn, $query_insert);
+               if ($stmt_insert) {
+
+                  $insert_time_in = "insert into emp_request_detail (controlno,emp_no,sched_type,change_time,encoded_by,encoded_date) select'" .  $controlno  . "','" .  $employee['emp_no'] . "','AMI','" . $params['timein']  . "','" . strtolower($employee['logname']) . "',getdate() ";
+
+                  $insert_time_out = "insert into emp_request_detail (controlno,emp_no,sched_type,change_time,encoded_by,encoded_date) select'" .  $controlno  . "','" .  $employee['emp_no'] . "','PMO','" . $params['timeout']  . "','" . strtolower($employee['logname']) . "',getdate() ";
+
+                  $insert_lunch_in = "insert into emp_request_detail (controlno,emp_no,sched_type,change_time,encoded_by,encoded_date) select'" .  $controlno  . "','" .  $employee['emp_no'] . "','LBI','" . $params['lunchbreak_in']  . "','" . strtolower($employee['logname']) . "',getdate() ";
+
+                  $insert_lunch_out = "insert into emp_request_detail (controlno,emp_no,sched_type,change_time,encoded_by,encoded_date) select'" .  $controlno  . "','" .  $employee['emp_no'] . "','LBO','" . $params['lunchbreak_out']  . "','" . strtolower($employee['logname']) . "',getdate() ";
+
+
+                  $insert_coffee_in = "insert into emp_request_detail (controlno,emp_no,sched_type,change_time,encoded_by,encoded_date) select'" .  $controlno  . "','" .  $employee['emp_no'] . "','CBI','" . $params['coffee_in']  . "','" . strtolower($employee['logname']) . "',getdate() ";
+
+                  $insert_coffee_out = "insert into emp_request_detail (controlno,emp_no,sched_type,change_time,encoded_by,encoded_date) select'" .  $controlno  . "','" .  $employee['emp_no'] . "','CBO','" . $params['coffee_out']  . "','" . strtolower($employee['logname']) . "',getdate() ";
+
+                  $stmt_timein = sqlsrv_query($insert_time_in);
+                  $stmt_timeout = sqlsrv_query($insert_time_out);
+                  $stmt_lunchin = sqlsrv_query($insert_lunch_in);
+                  $stmt_lunchout = sqlsrv_query($insert_lunch_out);
+                  $stmt_coffeeIn = sqlsrv_query($insert_coffee_in);
+                  $stmt_coffeeOut = sqlsrv_query($insert_coffee_out);
+
+                  if (!$stmt_timein) {
+                     $response['error'] = true;
+                     $response['status'] = 503;
+                     $response['message'] = "Time in data was not able to save to database!";
+                     echo json_encode($response);
+                     die();
+                  }
+                  if (!$stmt_timeout) {
+                     $response['error'] = true;
+                     $response['status'] = 503;
+                     $response['message'] = "Time out data was not able to save to database!";
+                     echo json_encode($response);
+                     die();
+                  }
+                  if (!$stmt_lunchin) {
+                     $response['error'] = true;
+                     $response['status'] = 503;
+                     $response['message'] = "Lunch break In data was not able to save to database!";
+                     echo json_encode($response);
+                     die();
+                  }
+                  if (!$stmt_lunchout) {
+                     $response['error'] = true;
+                     $response['status'] = 503;
+                     $response['message'] = "Lunch break Out data was not able to save to database!";
+                     echo json_encode($response);
+                     die();
+                  }
+                  if (!$stmt_coffeeIn) {
+                     $response['error'] = true;
+                     $response['status'] = 503;
+                     $response['message'] = "Coffee break In data was not able to save to database!";
+                     echo json_encode($response);
+                     die();
+                  }
+                  if (!$stmt_coffeeOut) {
+                     $response['error'] = true;
+                     $response['status'] = 503;
+                     $response['message'] = "Coffee break Out data was not able to save to database!";
+                     echo json_encode($response);
+                     die();
+                  }
+
+                  $leave_type = $leave_name;
+                  $date_filed = date('Y-m-d');
+                  $mailer = new Mailer();
+                  $mailer_from = $mailer->get_sender($employee['empno']);
+                  $mailer_to = $mailer->get_recipient($employee['empno']);
+                  $mailer_send = $mailer->mailformat_request($employee['empno'], $employee['name'], $leave_type, $date_filed, $controlno, $employee['department'], $employee['br_name'], $params['effective_date'], $params['remarks'], $mailer_from, $mailer_to);
+
+                  $response['error'] = false;
+                  $response['status'] = 200;
+                  $response['message'] = "Request successfuly submitted";
+               } else {
+                  $response['error'] = true;
+                  $response['status'] = 503;
+                  $response['message'] = "Unable to save request. Please try again later.";
+               }
+               # code...
+               break;
+            case 'LB':
+               $lrs_cls = new Standard("");
+               $queryLName = "select lrs_desc from ref_lrs_type where lrs_type like 'LUB'";
+               $stmt_lname = sqlsrv_query($conn, $queryLName);
+               if (sqlsrv_fetch($stmt_lname)) {
+                  $leave_name = $lrs_cls->bindMetaData($stmt_lname);
+               }
+
+               $GCN = new Standard("");
+               $controlno = $GCN->generateControlNumber('LB');
+               $controlno = $controlno['controlno'];
+               $xcontinue = false;
+
+               //-----------------UPDATE CONTROL NUMBER SQ-------------------
+               $clsControlNo = new Standard("");
+               $stat_control_no = $clsControlNo->nextControlNumber('LB');
+               //-------------------------------------------------------------
+
+               //-----------------GETTING USED CONTROL #-------------------
+               $cControlNo = new Standard("");
+               $queryC = "select 'LB'+right('00000000'+(select ltrim(rtrim(str(controlno))) from ref_controlno where module_code = 'LB'),8) as controlno";
+               $stmt_queryC = sqlsrv_query($conn, $queryC);
+               if (sqlsrv_fetch($stmt_queryC)) {
+                  $controlno = $cControlNo->bindMetaData($stmt_queryC);
+                  $controlno =  $controlno['controlno'];
+               }
+
+               $query_insert  = "insert into emp_request_master (controlno,emp_no,lrs_type,date_from,date_to,leavestatusid,reason,encoded_by, encoded_date,isapproved,approved_by,approved_date,audit_user,audit_date,ispis) select '" . $controlno . "','" . $employee['emp_no'] . "','LUB','" .  $params['effective_date'] . "','" .  $params['effective_date'] . "',1,'" . $lcRem . "','" . strtolower($employee['logname']) . "',getdate(),'0','---', NULL,'---',NULL,'0' ";
+               $stmt_insert = sqlsrv_query($conn, $query_insert);
+               if ($stmt_insert) {
+                  $insert_time_in = "insert into emp_request_detail (controlno,emp_no,sched_type,change_time,encoded_by,encoded_date) select'" .  $controlno  . "','" .  $employee['emp_no'] . "','AMI','" . $params['timein']  . "','" . strtolower($employee['logname']) . "',getdate() ";
+
+                  $insert_time_out = "insert into emp_request_detail (controlno,emp_no,sched_type,change_time,encoded_by,encoded_date) select'" .  $controlno  . "','" .  $employee['emp_no'] . "','PMO','" . $params['timeout']  . "','" . strtolower($employee['logname']) . "',getdate() ";
+
+                  $insert_lunch_in = "insert into emp_request_detail (controlno,emp_no,sched_type,change_time,encoded_by,encoded_date) select'" .  $controlno  . "','" .  $employee['emp_no'] . "','LBI','" . $params['lunchbreak_in']  . "','" . strtolower($employee['logname']) . "',getdate() ";
+
+                  $insert_lunch_out = "insert into emp_request_detail (controlno,emp_no,sched_type,change_time,encoded_by,encoded_date) select'" .  $controlno  . "','" .  $employee['emp_no'] . "','LBO','" . $params['lunchbreak_out']  . "','" . strtolower($employee['logname']) . "',getdate() ";
+
+
+                  $insert_coffee_in = "insert into emp_request_detail (controlno,emp_no,sched_type,change_time,encoded_by,encoded_date) select'" .  $controlno  . "','" .  $employee['emp_no'] . "','CBI','" . $params['coffee_in']  . "','" . strtolower($employee['logname']) . "',getdate() ";
+
+                  $insert_coffee_out = "insert into emp_request_detail (controlno,emp_no,sched_type,change_time,encoded_by,encoded_date) select'" .  $controlno  . "','" .  $employee['emp_no'] . "','CBO','" . $params['coffee_out']  . "','" . strtolower($employee['logname']) . "',getdate() ";
+
+                  $stmt_timein = sqlsrv_query($insert_time_in);
+                  $stmt_timeout = sqlsrv_query($insert_time_out);
+                  $stmt_lunchin = sqlsrv_query($insert_lunch_in);
+                  $stmt_lunchout = sqlsrv_query($insert_lunch_out);
+                  $stmt_coffeeIn = sqlsrv_query($insert_coffee_in);
+                  $stmt_coffeeOut = sqlsrv_query($insert_coffee_out);
+
+                  if (!$stmt_timein) {
+                     $response['error'] = true;
+                     $response['status'] = 503;
+                     $response['message'] = "Time in data was not able to save to database!";
+                     echo json_encode($response);
+                     die();
+                  }
+                  if (!$stmt_timeout) {
+                     $response['error'] = true;
+                     $response['status'] = 503;
+                     $response['message'] = "Time out data was not able to save to database!";
+                     echo json_encode($response);
+                     die();
+                  }
+                  if (!$stmt_lunchin) {
+                     $response['error'] = true;
+                     $response['status'] = 503;
+                     $response['message'] = "Lunch break In data was not able to save to database!";
+                     echo json_encode($response);
+                     die();
+                  }
+                  if (!$stmt_lunchout) {
+                     $response['error'] = true;
+                     $response['status'] = 503;
+                     $response['message'] = "Lunch break Out data was not able to save to database!";
+                     echo json_encode($response);
+                     die();
+                  }
+                  if (!$stmt_coffeeIn) {
+                     $response['error'] = true;
+                     $response['status'] = 503;
+                     $response['message'] = "Coffee break In data was not able to save to database!";
+                     echo json_encode($response);
+                     die();
+                  }
+                  if (!$stmt_coffeeOut) {
+                     $response['error'] = true;
+                     $response['status'] = 503;
+                     $response['message'] = "Coffee break Out data was not able to save to database!";
+                     echo json_encode($response);
+                     die();
+                  }
+
+                  $leave_type = $leave_name;
+                  $date_filed = date('Y-m-d');
+                  $mailer = new Mailer();
+                  $mailer_from = $mailer->get_sender($employee['empno']);
+                  $mailer_to = $mailer->get_recipient($employee['empno']);
+                  $mailer_send = $mailer->mailformat_request($employee['empno'], $employee['name'], $leave_type, $date_filed, $controlno, $employee['department'], $employee['br_name'], $params['effective_date'], $params['remarks'], $mailer_from, $mailer_to);
+
+                  $response['error'] = false;
+                  $response['status'] = 200;
+                  $response['message'] = "Request successfuly submitted";
+               } else {
+                  $response['error'] = true;
+                  $response['status'] = 503;
+                  $response['message'] = "Unable to save request. Please try again later.";
+               }
+               # code...
+               break;
+            case 'CB':
+               $lrs_cls = new Standard("");
+               $queryLName = "select lrs_desc from ref_lrs_type where lrs_type like 'COB'";
+               $stmt_lname = sqlsrv_query($conn, $queryLName);
+               if (sqlsrv_fetch($stmt_lname)) {
+                  $leave_name = $lrs_cls->bindMetaData($stmt_lname);
+               }
+
+               $GCN = new Standard("");
+               $controlno = $GCN->generateControlNumber('CB');
+               $controlno = $controlno['controlno'];
+               $xcontinue = false;
+
+               //-----------------UPDATE CONTROL NUMBER SQ-------------------
+               $clsControlNo = new Standard("");
+               $stat_control_no = $clsControlNo->nextControlNumber('CB');
+               //-------------------------------------------------------------
+
+               //-----------------GETTING USED CONTROL #-------------------
+               $cControlNo = new Standard("");
+               $queryC = "select 'CB'+right('00000000'+(select ltrim(rtrim(str(controlno))) from ref_controlno where module_code = 'CB'),8) as controlno";
+               $stmt_queryC = sqlsrv_query($conn, $queryC);
+               if (sqlsrv_fetch($stmt_queryC)) {
+                  $controlno = $cControlNo->bindMetaData($stmt_queryC);
+                  $controlno =  $controlno['controlno'];
+               }
+               $query_insert  = "insert into emp_request_master (controlno,emp_no,lrs_type,date_from,date_to,leavestatusid,reason,encoded_by, encoded_date,isapproved,approved_by,approved_date,audit_user,audit_date,ispis) select '" . $controlno . "','" . $employee['emp_no'] . "','COB','" .  $params['effective_date'] . "','" .  $params['effective_date'] . "',1,'" . $lcRem . "','" . strtolower($employee['logname']) . "',getdate(),'0','---', NULL,'---',NULL,'0' ";
+               $stmt_insert = sqlsrv_query($conn, $query_insert);
+               if ($stmt_insert) {
+                  $insert_time_in = "insert into emp_request_detail (controlno,emp_no,sched_type,change_time,encoded_by,encoded_date) select'" .  $controlno  . "','" .  $employee['emp_no'] . "','AMI','" . $params['timein']  . "','" . strtolower($employee['logname']) . "',getdate() ";
+
+                  $insert_time_out = "insert into emp_request_detail (controlno,emp_no,sched_type,change_time,encoded_by,encoded_date) select'" .  $controlno  . "','" .  $employee['emp_no'] . "','PMO','" . $params['timeout']  . "','" . strtolower($employee['logname']) . "',getdate() ";
+
+                  $insert_lunch_in = "insert into emp_request_detail (controlno,emp_no,sched_type,change_time,encoded_by,encoded_date) select'" .  $controlno  . "','" .  $employee['emp_no'] . "','LBI','" . $params['lunchbreak_in']  . "','" . strtolower($employee['logname']) . "',getdate() ";
+
+                  $insert_lunch_out = "insert into emp_request_detail (controlno,emp_no,sched_type,change_time,encoded_by,encoded_date) select'" .  $controlno  . "','" .  $employee['emp_no'] . "','LBO','" . $params['lunchbreak_out']  . "','" . strtolower($employee['logname']) . "',getdate() ";
+
+
+                  $insert_coffee_in = "insert into emp_request_detail (controlno,emp_no,sched_type,change_time,encoded_by,encoded_date) select'" .  $controlno  . "','" .  $employee['emp_no'] . "','CBI','" . $params['coffee_in']  . "','" . strtolower($employee['logname']) . "',getdate() ";
+
+                  $insert_coffee_out = "insert into emp_request_detail (controlno,emp_no,sched_type,change_time,encoded_by,encoded_date) select'" .  $controlno  . "','" .  $employee['emp_no'] . "','CBO','" . $params['coffee_out']  . "','" . strtolower($employee['logname']) . "',getdate() ";
+
+                  $stmt_timein = sqlsrv_query($insert_time_in);
+                  $stmt_timeout = sqlsrv_query($insert_time_out);
+                  $stmt_lunchin = sqlsrv_query($insert_lunch_in);
+                  $stmt_lunchout = sqlsrv_query($insert_lunch_out);
+                  $stmt_coffeeIn = sqlsrv_query($insert_coffee_in);
+                  $stmt_coffeeOut = sqlsrv_query($insert_coffee_out);
+
+                  if (!$stmt_timein) {
+                     $response['error'] = true;
+                     $response['status'] = 503;
+                     $response['message'] = "Time in data was not able to save to database!";
+                     echo json_encode($response);
+                     die();
+                  }
+                  if (!$stmt_timeout) {
+                     $response['error'] = true;
+                     $response['status'] = 503;
+                     $response['message'] = "Time out data was not able to save to database!";
+                     echo json_encode($response);
+                     die();
+                  }
+                  if (!$stmt_lunchin) {
+                     $response['error'] = true;
+                     $response['status'] = 503;
+                     $response['message'] = "Lunch break In data was not able to save to database!";
+                     echo json_encode($response);
+                     die();
+                  }
+                  if (!$stmt_lunchout) {
+                     $response['error'] = true;
+                     $response['status'] = 503;
+                     $response['message'] = "Lunch break Out data was not able to save to database!";
+                     echo json_encode($response);
+                     die();
+                  }
+                  if (!$stmt_coffeeIn) {
+                     $response['error'] = true;
+                     $response['status'] = 503;
+                     $response['message'] = "Coffee break In data was not able to save to database!";
+                     echo json_encode($response);
+                     die();
+                  }
+                  if (!$stmt_coffeeOut) {
+                     $response['error'] = true;
+                     $response['status'] = 503;
+                     $response['message'] = "Coffee break Out data was not able to save to database!";
+                     echo json_encode($response);
+                     die();
+                  }
+
+                  $leave_type = $leave_name;
+                  $date_filed = date('Y-m-d');
+                  $mailer = new Mailer();
+                  $mailer_from = $mailer->get_sender($employee['empno']);
+                  $mailer_to = $mailer->get_recipient($employee['empno']);
+                  $mailer_send = $mailer->mailformat_request($employee['empno'], $employee['name'], $leave_type, $date_filed, $controlno, $employee['department'], $employee['br_name'], $params['effective_date'], $params['remarks'], $mailer_from, $mailer_to);
+                  $response['error'] = false;
+                  $response['status'] = 200;
+                  $response['message'] = "Request successfuly submitted";
+               } else {
+                  $response['error'] = true;
+                  $response['status'] = 503;
+                  $response['message'] = "Unable to save request. Please try again later.";
+               }
+
+               break;
+            case 'DO':
+               $query = "select * from emp_request_master where lrs_type = 'DOF' and convert(char(10),date_from,112) like convert(char(10),cast('" .  $params['effective_date'] . "' as datetime),112) and leavestatusid not in(6,5) and emp_no = '" .  $employee['emp_no'] . "' ";
+               $stmt = sqlsrv_query($conn, $query);
+               if (sqlsrv_fetch($stmt)) {
+                  $response['error'] = true;
+                  $response['status'] = 503;
+                  $response['message'] = "Request date already filed.";
+               } else {
+                  $GCN = new Standard("");
+                  $controlno = $GCN->generateControlNumber('CD');
+                  $controlno = $controlno['controlno'];
+                  $xcontinue = false;
+
+                  //-----------------UPDATE CONTROL NUMBER SQ-------------------
+                  $clsControlNo = new Standard("");
+                  $stat_control_no = $clsControlNo->nextControlNumber('CD');
+                  //-------------------------------------------------------------
+
+                  //-----------------GETTING USED CONTROL #-------------------
+                  $cControlNo = new Standard("");
+                  $queryC = "select 'CD'+right('00000000'+(select ltrim(rtrim(str(controlno))) from ref_controlno where module_code = 'CD'),8) as controlno";
+                  $stmt_queryC = sqlsrv_query($conn, $queryC);
+                  if (sqlsrv_fetch($stmt_queryC)) {
+                     $controlno = $cControlNo->bindMetaData($stmt_queryC);
+                     $controlno =  $controlno['controlno'];
+                  }
+
+
+                  $query_insert = "insert into emp_request_master (controlno,emp_no,lrs_type,date_from,date_to,leavestatusid,reason,encoded_by, encoded_date,isapproved,approved_by,approved_date,audit_user,audit_date,ispis) select '" . $controlno . "','" . $employee['emp_no']  . "','DOF','" . $params['off_dat_off'] . "','" . $params['effective_date'] . "',1,'" .  $params['remarks'] . "','" . $employee['logname'] . "',getdate(),'0','---',NULL,'---',NULL,'0' ";
+                  $stmt_insert = sqlsrv_query($conn, $query_insert);
+                  if ($stmt_insert) {
+                     $response['error'] = true;
+                     $response['status'] = 200;
+                     $response['message'] = "Request successfuly submitted.";
+                  } else {
+                     $response['error'] = true;
+                     $response['status'] =  503;
+                     $response['message'] = "System Error. Please try again later";
+                  }
+               }
+               break;
+
+            default:
+               $response['error'] = true;
+               $response['status'] =  403;
+               $response['message'] = "File not found";
+               break;
+         }
+      }
    } else {
       $response['error'] = true;
       $response['status'] = 503;
       $response['message'] = "Token unrecognized.";
    }
+} else {
+   $response['error'] = true;
+   $response['status'] = 404;
+   $response['message'] = "Page Not Found.";
 }
 
 

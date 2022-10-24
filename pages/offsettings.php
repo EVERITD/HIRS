@@ -299,10 +299,11 @@
          body: reqbody
       })
       const {
-         error
+         error,
+         message
       } = await response.json();
-      console.log(error)
-      getOTControl()
+      alert(message)
+      getOTControl();
    }
 
 
