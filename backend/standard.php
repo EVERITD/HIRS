@@ -87,7 +87,6 @@ class Standard
       $data = [];
       try {
          foreach (sqlsrv_field_metadata($stmt) as $field) {
-            // var_dump(sqlsrv_get_field($stmt, $ctr));
             if ($field['Name'] == 'log_date' || $field['Name'] == 'approved_date') {
                $date = sqlsrv_get_field($stmt, $ctr);
                if ($date) {

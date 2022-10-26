@@ -72,11 +72,11 @@ $Approver = $_SESSION['Approver'];
             if ($PInfo['pis_controller'] || $PInfo['pis_recruiter'] || $PInfo['is_dept_head'] || $PInfo['log_name'] == "JOHANN.GO" || $PInfo['log_name'] == "GENIVER.PAULAR" || $PInfo['log_name'] == "APPLE JOY.ALOJACIN" || $PInfo['log_name'] == "LUIS PAULO.ASERADO" || $PInfo['log_name'] == 'CHRISTIAN MARVIN.ORSUA') {
                echo '<p style="margin: 0;font-weight:bold;text-transform:uppercase" class="list-group-item list-group-item-action" onclick="showAdminMenu()"><i class="bi bi-shield-lock-fill" style="font-size: 15px;">&nbsp;&nbsp;</i>Admin Access</p>
                <div class="auto-hide" style="overflow:hidden;" id="adminMenu">';
-               if ($PInfo['pis_controller']  != false) {
-                  echo ' <a id="listItem" href="leave.php" style="margin: 0; font-size:11px;" class="list-group-item list-group-item-action">- Pending Validation</a>';
+               if ($PInfo['pis_controller']  != false || $PInfo['log_name'] == 'CHRISTIAN MARVIN.ORSUA') {
+                  echo ' <a id="listItem" href="pendingValidation.php" style="margin: 0; font-size:11px;" class="list-group-item list-group-item-action">- Pending Validation</a>';
                }
-               if ($PInfo['is_dept_head'] != false) {
-                  echo ' <a id="listItem" href="tar.php" style="margin: 0;" class="list-group-item list-group-item-action">- Approvals</a>
+               if ($PInfo['is_dept_head'] != false || $PInfo['log_name'] == 'CHRISTIAN MARVIN.ORSUA') {
+                  echo ' <a id="listItem" href="approval.php" style="margin: 0;" class="list-group-item list-group-item-action">- Approvals</a>
                   <a id="listItem" href="leave.php" style="margin: 0; font-size:11px;" class="list-group-item list-group-item-action">- Request History</a>
                   ';
                }

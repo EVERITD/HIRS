@@ -22,6 +22,7 @@ if ($_SERVER['HTTP_AUTORIZATION']) {
          $br_name = "";
 
 
+
          $Employee = new Standard("");
          $_query1 = "select rtrim(ltrim(a.emp_no)) as emp_no,g.br_name,rtrim(ltrim(d.deptname)) as department,ltrim(rtrim(a.firstname))+'.'+ltrim(rtrim(a.lastname)) as log_name, ltrim(rtrim(a.lastname))+', '+ltrim(rtrim(a.firstname))+' '+substring(ltrim(rtrim(middlename)), 1, 1)+'.' as name, ltrim(rtrim(g.id_prefix)) as id_prefix from ref_emp_mast a left join ref_emp_trans b on a.emp_no = b.emp_no left join ref_position c on b.br_code = c.br_code and b.div_code = c.div_code and b.rank_code = c.rank_code and b.dept_code = c.dept_code and b.post_code = c.post_code left join ref_department d on d.br_code = b.br_code and d.div_code = b.div_code and d.dept_code = b.dept_code left join hris_mainLogIn e on b.emp_no in (e.user_name,e.temp_pass) left join ref_emp_stat f on f.emp_stat = b.emp_stat and f.br_prefix = b.br_code left join ref_branch g on d.br_code = g.br_code where ( b.emp_stat in ('regu','prob','cont','ojt') and b.date_end is null or date_end > getdate() or date_end = '1900-01-01 00:00:00.000') and e.log_key = 1 and token_id like rtrim(ltrim('" . $token . "'))";
          $stmt1 = sqlsrv_query($conn, $_query1);
@@ -84,6 +85,7 @@ if ($_SERVER['HTTP_AUTORIZATION']) {
                $loa_params['date_from'] = $datefrom;
                $loa_params['date_to'] = $dateto;
                $loa_params['leavestatusid'] = '1';
+               $loa_params['leavestatusid'] = '1';
                $loa_params['reason'] = $reason;
                $loa_params['encoded_by'] = $logname;
                $loa_params['encoded_date'] = 'getdate()';
@@ -93,6 +95,7 @@ if ($_SERVER['HTTP_AUTORIZATION']) {
                $loa_params['audit_user'] = '---';
                // $loa_params['audit_date'] = '';
                $loa_params['ispis'] =  '0';
+
 
                //------------CREATING LEAVE OF ABSENCE REQUEST-----------
                $Insertion = new Standard("emp_request_master");
@@ -104,6 +107,8 @@ if ($_SERVER['HTTP_AUTORIZATION']) {
                   $response['error'] = true;
                   $response['message'] = "Unable to save request, please try again later";
                } else {
+
+
                   //-----------------UPDATE CONTROL NUMBER SQ-------------------
                   $clsControlNo = new Standard("");
                   $stat_control_no = $clsControlNo->nextControlNumber('CS');
@@ -168,12 +173,12 @@ if ($_SERVER['HTTP_AUTORIZATION']) {
             $data = $_POST['data'];
 
             //Check inputs
-            $params['timein'] = str_replace(":", ".", $data['timein']);
-            $params['timeout'] = str_replace(":", ".", $data['timeout']);
-            $params['lunchin'] = str_replace(":", ".", $data['lbIn']);
-            $params['lunchout'] = str_replace(":", ".", $data['lbOut']);
-            $params['coffeein'] = str_replace(":", ".", $data['cbIn']);
-            $params['coffeeout'] = str_replace(":", ".", $data['cbOut']);
+            $params['timein'] = $data['timein'] ? str_replace(":", ".", $data['timein']) : 0;
+            $params['timeout'] = $data['timeout'] ? str_replace(":", ".", $data['timeout']) : 0;
+            $params['lunchin'] = $data['lbIn'] ? str_replace(":", ".", $data['lbIn']) : 0;
+            $params['lunchout'] = $data['lbOut'] ? str_replace(":", ".", $data['lbOut']) : 0;
+            $params['coffeein'] = $data['cbIn'] ? str_replace(":", ".", $data['cbIn']) : 0;
+            $params['coffeeout'] = $data['cbOut'] ? str_replace(":", ".", $data['cbOut']) : 0;
             $params['effdate'] = date("Y-m-d", strtotime($data['effdte']));
             $params['reason'] =  $data['remarks'];
 
@@ -186,7 +191,6 @@ if ($_SERVER['HTTP_AUTORIZATION']) {
                $response['error'] = true;
                $response['message'] = "TAR date already filed, please select new date!";
             } else {
-
                $GCN = new Standard("");
                $controlno = $GCN->generateControlNumber('TR');
                $controlno = $controlno['controlno'];
@@ -838,8 +842,6 @@ if ($_SERVER['HTTP_AUTORIZATION']) {
                if (sqlsrv_fetch($stmt_lname)) {
                   $leave_name = $lrs_cls->bindMetaData($stmt_lname);
                }
-               var_dump($employee);
-               die();
                $GCN = new Standard("");
                $controlno = $GCN->generateControlNumber('CW');
                $controlno = $controlno['controlno'];
@@ -929,9 +931,9 @@ if ($_SERVER['HTTP_AUTORIZATION']) {
                   $leave_type = $leave_name;
                   $date_filed = date('Y-m-d');
                   $mailer = new Mailer();
-                  $mailer_from = $mailer->get_sender($employee['empno']);
-                  $mailer_to = $mailer->get_recipient($employee['empno']);
-                  $mailer_send = $mailer->mailformat_request($employee['empno'], $employee['name'], $leave_type, $date_filed, $controlno, $employee['department'], $employee['br_name'], $params['effective_date'], $params['remarks'], $mailer_from, $mailer_to);
+                  $mailer_from = $mailer->get_sender($employee['emp_no']);
+                  $mailer_to = $mailer->get_recipient($employee['emp_no']);
+                  $mailer_send = $mailer->mailformat_request($employee['emp_no'], $employee['name'], $leave_type, $date_filed, $controlno, $employee['department'], $employee['br_name'], $params['effective_date'], $params['remarks'], $mailer_from, $mailer_to);
 
                   $response['error'] = false;
                   $response['status'] = 200;
@@ -1039,9 +1041,9 @@ if ($_SERVER['HTTP_AUTORIZATION']) {
                   $leave_type = $leave_name;
                   $date_filed = date('Y-m-d');
                   $mailer = new Mailer();
-                  $mailer_from = $mailer->get_sender($employee['empno']);
-                  $mailer_to = $mailer->get_recipient($employee['empno']);
-                  $mailer_send = $mailer->mailformat_request($employee['empno'], $employee['name'], $leave_type, $date_filed, $controlno, $employee['department'], $employee['br_name'], $params['effective_date'], $params['remarks'], $mailer_from, $mailer_to);
+                  $mailer_from = $mailer->get_sender($employee['emp_no']);
+                  $mailer_to = $mailer->get_recipient($employee['emp_no']);
+                  $mailer_send = $mailer->mailformat_request($employee['emp_no'], $employee['name'], $leave_type, $date_filed, $controlno, $employee['department'], $employee['br_name'], $params['effective_date'], $params['remarks'], $mailer_from, $mailer_to);
 
                   $response['error'] = false;
                   $response['status'] = 200;
@@ -1148,9 +1150,9 @@ if ($_SERVER['HTTP_AUTORIZATION']) {
                   $leave_type = $leave_name;
                   $date_filed = date('Y-m-d');
                   $mailer = new Mailer();
-                  $mailer_from = $mailer->get_sender($employee['empno']);
-                  $mailer_to = $mailer->get_recipient($employee['empno']);
-                  $mailer_send = $mailer->mailformat_request($employee['empno'], $employee['name'], $leave_type, $date_filed, $controlno, $employee['department'], $employee['br_name'], $params['effective_date'], $params['remarks'], $mailer_from, $mailer_to);
+                  $mailer_from = $mailer->get_sender($employee['emp_no']);
+                  $mailer_to = $mailer->get_recipient($employee['emp_no']);
+                  $mailer_send = $mailer->mailformat_request($employee['emp_no'], $employee['name'], $leave_type, $date_filed, $controlno, $employee['department'], $employee['br_name'], $params['effective_date'], $params['remarks'], $mailer_from, $mailer_to);
                   $response['error'] = false;
                   $response['status'] = 200;
                   $response['message'] = "Request successfuly submitted";
@@ -1210,6 +1212,930 @@ if ($_SERVER['HTTP_AUTORIZATION']) {
                break;
          }
       }
+      if ($_POST['action'] == "ITENARYAPPROVAL") {
+         $data = $_POST['data'];
+         $dates = explode('-', $data['eff_date']);
+         $params['date_from'] = trim($dates['0']);
+         $params['date_to'] = trim($dates['1']);
+         $params['timefrom'] = str_replace(":", ".", $data['timefrom']);
+
+         $params['timeto'] = str_replace(":", ".", $data['timeto']);
+         $params['remarks'] = $data['remarks'];
+         $params['iarType'] = $data['iarType'];
+
+
+         $employee = extractEmployee($conn, $MAIN_TOKEN);
+
+         $query_check = "select controlno,emp_no,effdate,effdateto,timefr,timeto,leavestatusid,type,remark,ispis,encoded_by,encoded_date,approved_by,approved_date 
+         from iar_file where emp_no = '" . $employee['emp_no'] . "' and ((CONVERT(CHAR(8),effdate, 112) between convert(char(8),cast('" . $params['date_from'] . "' as datetime),112) and 
+         convert(char(8),cast('" .  $params['date_to'] . "' as datetime),112)) 
+         or (CONVERT(CHAR(8),effdateto, 112) between convert(char(8),cast('" . $params['date_from'] . "' as datetime),112) and convert(char(8),cast('" .  $params['date_to'] . "' as datetime),112)))
+         and leavestatusid not in(6,5)";
+
+         $stmt_check = sqlsrv_query($conn, $query_check);
+         if (sqlsrv_fetch($stmt_check)) {
+            $response['error'] = true;
+            $response['status'] = 503;
+            $response['message'] = "Effective already date.";
+            echo json_encode($response);
+         } else {
+
+
+            $GCN = new Standard("");
+            $controlno = $GCN->generateControlNumber('IA');
+            $controlno = $controlno['controlno'];
+            $xcontinue = false;
+
+            //-----------------UPDATE CONTROL NUMBER SQ-------------------
+            $clsControlNo = new Standard("");
+            $stat_control_no = $clsControlNo->nextControlNumber('IA');
+            //-------------------------------------------------------------
+
+            //-----------------GETTING USED CONTROL #-------------------
+            $cControlNo = new Standard("");
+            $queryC = "select 'IA'+right('00000000'+(select ltrim(rtrim(str(controlno))) from ref_controlno where module_code = 'IA'),8) as controlno";
+            $stmt_queryC = sqlsrv_query($conn, $queryC);
+            if (sqlsrv_fetch($stmt_queryC)) {
+               $controlno = $cControlNo->bindMetaData($stmt_queryC);
+               $controlno =  $controlno['controlno'];
+            }
+
+            $query_insert = "Insert into iar_file (controlno,emp_no,effdate,effdateto,timefr,timeto,leavestatusid,type,remark,encoded_by,encoded_date,isapproved,approved_by,audit_user) select '" . $controlno . "','" . $employee['emp_no']  . "','" . $params['date_from']  . "','" . $params['date_to']  . "',substring('" . $params['timefrom'] . "',1,5),substring('" .  $params['timeto']  . "',1,5),1,'" . $params['iarType'] . "','" . str_replace("'", "`", $params['remarks']) . "','" . strtolower($employee['logname']) . "',getdate(),0,'---','---'";
+            $stmt_insert = sqlsrv_query($conn, $query_insert);
+            if ($stmt_insert) {
+               $leave_type = 'Itinerary Approval';
+               $date_filed = date('Y-m-d');
+               $lceff_date = $params['date_from'] . '@ ' . $params['timefrom'] . ' - ' . $params['date_to'] . ' @ ' . $params['timeto'];
+
+               $mailer = new Mailer();
+               $mailer_from = $mailer->get_sender($employee['emp_no']);
+               $mailer_to = $mailer->get_recipient($employee['emp_no']);
+               $test_mail_to[0]['email'] = "marvin.orsua@ever.ph";
+               $mailer_send = $mailer->mailformat_request($employee['emp_no'], $employee['emp_name'], $leave_type, $date_filed, $controlno, $employee['department'], $employee['br_name'],   $lceff_date, $params['remarks'], $mailer_from,  $test_mail_to);
+               $response['status'] = '200';
+               $response['error'] = false;
+               $response['message'] = "Successfully saved request!";
+            } else {
+               $response['error'] = true;
+               $response['status'] = 503;
+               $response['message'] = "Unable to save request. Please try again later.";
+            }
+         }
+      }
+      if ($_POST['action'] == "deleterequest") {
+         $contNoSub = substr($_POST['controlno'], 0, 2);
+
+         switch (true) {
+            case ($contNoSub == 'CS' || $contNoSub == 'CW' || $contNoSub == 'CD' || $contNoSub == 'LB' || $contNoSub == 'CB'):
+               $toTable = 'emp_request_master';
+
+               break;
+
+            case ($contNoSub == 'LV'):
+               $toTable = 'leave_trans';
+               break;
+
+            case ($contNoSub == 'OT'):
+               $toTable = 'ot_file';
+               break;
+
+            case ($contNoSub == 'UN'):
+               $toTable = 'undertime_file';
+               break;
+
+            case ($contNoSub == 'IA'):
+               $toTable = 'iar_file';
+               break;
+
+            case ($contNoSub == 'TR'):
+               $toTable = 'tar_file';
+               break;
+
+            case ($contNoSub == 'AD'):
+               $toTable = 'rsr_aday_only_file';
+               break;
+
+            default:
+               $toTable = 'leave_trans';
+               break;
+         }
+
+
+         $qryDel = "select * from " . $toTable . " where leavestatusid = '1' and isapproved = '0' and controlno = '" . $_POST['controlno'] . "'";
+         $resultDel = sqlsrv_query($conn, $qryDel);
+         if (!sqlsrv_fetch($resultDel)) {
+
+            $response['status'] = 'error';
+            $response['message'] = "No Requests Found!(for deletion)...";
+            echo json_encode($response);
+            die();
+         } else {
+            //for updating in offset
+            $tableCancel = array("emp_request_master", "undertime_file");
+
+            //check property on submitted (offset/not)
+
+            if (in_array(trim($toTable), $tableCancel)) {
+               $clsResult = new Standard('');
+               $isOffset = $clsResult->bindMetaData($resultDel)['isoffset'];
+               if ($isOffset == 1) {
+                  $queryUpd = "update ot_file set ut_cntno = null,used_un_hrs = 0,remain_hrs = no_of_hrs,isused = 0 where ut_cntno = '" . $_POST['controlno'] . "'
+                               update " . $toTable . " set leavestatusid = '6',approved_date = getdate() ,ot_cntno = 'cancelled',used_ot_hrs = 0 where controlno = '" . $_POST['controlno'] . "'";
+                  $resultUpd = sqlsrv_query($conn, $queryUpd);
+               } else {
+                  //regular filed
+                  $queryUpd = "update " . $toTable . " set leavestatusid = '6',approved_date = getdate() where controlno = '" . $_POST['controlno'] . "'";
+                  $resultUpd = sqlsrv_query($conn, $queryUpd);
+               }
+            } else {
+               //regular filed
+               $queryUpd = "update " . $toTable . " set leavestatusid = '6',approved_date = getdate() where controlno = '" . $_POST['controlno'] . "'";
+               $resultUpd = sqlsrv_query($conn, $queryUpd);
+            }
+
+
+            $response['error'] = false;
+            $response['status'] = 200;
+            $response['message'] = "Successfuly deleted request.";
+         }
+      }
+      if ($_POST['action'] == "approvals") {
+         $employee = extractEmployee($conn, $MAIN_TOKEN);
+         $employee['emp_no'] = "9900628";
+         if ($employee) {
+            $query = "SELECT e.controlno,
+                     Rtrim(Ltrim(a.lastname)) + ', '
+                     + Rtrim(Ltrim(a.firstname)) + ' '
+                     + Substring(a.middlename, 1, 1) + '. ('
+                     + Ltrim(Rtrim(z.sitecode)) + ')'       AS NAME,
+                     CASE
+                     WHEN Ltrim(Rtrim(h.leave_code)) IN( 'HV', 'HS' ) THEN
+                     Ltrim(Rtrim(h.leave_name)) + ' '
+                     + Ltrim(Rtrim(CONVERT(CHAR(6), e.no_of_hrs)))
+                     + ' hours only'
+                     ELSE Ltrim(Rtrim(h.leave_name))
+                     END                                    AS leave_name,
+                     CONVERT(CHAR(12), date_ffrom, 101)     AS date_Ffrom,
+                     CONVERT(CHAR(12), date_fto, 101)       AS date_Fto,
+                     e.reason,
+                     CONVERT(CHAR(12), e.encoded_date, 101) AS encoded_date,
+                     g.leavestatus,
+                     CASE
+                     WHEN Ltrim(Rtrim(e.approved_by)) = '---'
+                           AND Ltrim(Rtrim(e.audit_user)) = '---' THEN 'New Request'
+                     ELSE
+                        CASE
+                           WHEN Ltrim(Rtrim(e.approved_by)) != '---'
+                              AND Ltrim(Rtrim(e.audit_user)) = '---' THEN
+                           'Reviewed | Unapproved'
+                           ELSE
+                           CASE
+                              WHEN Ltrim(Rtrim(e.approved_by)) != '---'
+                                    AND Ltrim(Rtrim(e.audit_user)) != '---' THEN
+                              'Reviewed | Approved'
+                              ELSE
+                                 CASE
+                                 WHEN Ltrim(Rtrim(e.approved_by)) = '---'
+                                       AND Ltrim(Rtrim(e.audit_user)) != '---' THEN
+                                 'Approved | Approved'
+                                 END
+                           END
+                        END
+                     END                                    AS apphead
+            FROM   leave_trans e
+                     LEFT JOIN ref_emp_trans b
+                           ON e.emp_no = b.emp_no
+                     LEFT JOIN ref_emp_mast a
+                           ON a.emp_no = e.emp_no
+                     LEFT JOIN ref_leavestat g
+                           ON e.leavestatusid = g.leavestatusid
+                     LEFT JOIN ref_leave_code h
+                           ON e.leave_code = h.leave_code
+                     LEFT JOIN ref_hris_approver i
+                           ON b.emp_no = i.emp_no
+                     LEFT JOIN ref_branch z
+                           ON Substring(Ltrim(Rtrim(a.emp_no)), 1, 2) =
+                              Ltrim(Rtrim(z.id_prefix))
+            WHERE  b.br_code LIKE '%%'
+                     AND e.leavestatusid IN ( '1', '8' )
+                     AND i.approver_empno = '" . $employee['emp_no'] . "'
+            UNION
+            SELECT j.controlno,
+                     Rtrim(Ltrim(k.lastname)) + ', '
+                     + Rtrim(Ltrim(k.firstname)) + ' '
+                     + Substring(k.middlename, 1, 1) + '. ('
+                     + Ltrim(Rtrim(z.sitecode)) + ')',
+                     o.lrs_desc,
+                     CONVERT(CHAR(12), j.date_from, 101),
+                     CONVERT(CHAR(12), j.date_to, 101),
+                     CASE
+                     WHEN Ltrim(Rtrim(j.ot_cntno)) != '' THEN
+                     Ltrim(Rtrim(j.reason)) + ' [Offsetting '
+                     + Ltrim(Rtrim(j.ot_cntno)) + ']'
+                     ELSE Ltrim(Rtrim(j.reason))
+                     END,
+                     CONVERT(CHAR(12), j.encoded_date, 101),
+                     n.leavestatus,
+                     CASE
+                     WHEN Ltrim(Rtrim(j.approved_by)) = '---'
+                           AND Ltrim(Rtrim(j.audit_user)) = '---' THEN 'New Request'
+                     ELSE
+                        CASE
+                           WHEN Ltrim(Rtrim(j.approved_by)) != '---'
+                              AND Ltrim(Rtrim(j.audit_user)) = '---' THEN
+                           'Reviewed | Unapproved'
+                           ELSE
+                           CASE
+                              WHEN Ltrim(Rtrim(j.approved_by)) != '---'
+                                    AND Ltrim(Rtrim(j.audit_user)) != '---' THEN
+                              'Reviewed | Approved'
+                              ELSE
+                                 CASE
+                                 WHEN Ltrim(Rtrim(j.approved_by)) = '---'
+                                       AND Ltrim(Rtrim(j.audit_user)) != '---' THEN
+                                 'Approved | Approved'
+                                 END
+                           END
+                        END
+                     END AS apphead
+            FROM   emp_request_master j
+                     LEFT JOIN ref_emp_mast k
+                           ON j.emp_no = k.emp_no
+                     LEFT JOIN ref_emp_trans l
+                           ON l.emp_no = j.emp_no
+                     LEFT JOIN ref_leavestat n
+                           ON n.leavestatusid = j.leavestatusid
+                     LEFT JOIN ref_emp_request_type o
+                           ON o.lrs_type = j.lrs_type
+                     LEFT JOIN ref_hris_approver p
+                           ON j.emp_no = p.emp_no
+                     LEFT JOIN ref_branch z
+                           ON Substring(Ltrim(Rtrim(k.emp_no)), 1, 2) =
+                              Ltrim(Rtrim(z.id_prefix))
+            WHERE  l.br_code LIKE '%%'
+                     AND j.leavestatusid IN ( '1', '8' )
+                     AND p.approver_empno = '" . $employee['emp_no'] . "'
+            UNION
+            SELECT j1.controlno,
+                     Rtrim(Ltrim(k1.lastname)) + ', '
+                     + Rtrim(Ltrim(k1.firstname)) + ' '
+                     + Substring(k1.middlename, 1, 1) + '. ('
+                     + Ltrim(Rtrim(z.sitecode)) + ')',
+                     'Overtime ' + l1.ot_name,
+                     CONVERT(CHAR(12), j1.date, 101) + '@ ' + CASE WHEN j1.time_from BETWEEN 0
+                     AND
+                     11.99 THEN Rtrim(Ltrim(CONVERT(CHAR(6), j1.time_from)))+ ' am ' ELSE CASE
+                     WHEN
+                     j1.time_from BETWEEN 12 AND 12.99 THEN
+                     Rtrim(Ltrim(CONVERT(CHAR(6), j1.time_from)))+ ' pm ' ELSE Rtrim(Ltrim(
+                     CONVERT(
+                     CHAR(6), j1.time_from-12)))+ ' pm ' END
+                     END,
+                     CONVERT(CHAR(12), CASE WHEN time_from > time_to THEN
+                     CONVERT(CHAR(12), j1.date+1, 101) ELSE CONVERT(CHAR(12), j1.date, 101)
+                     END, 101)
+                     + '@ ' + CASE WHEN
+                     j1.time_to BETWEEN 0 AND 11.99 THEN
+                     Rtrim(Ltrim(CONVERT(CHAR(6), j1.time_to)))+
+                     ' am '
+                     ELSE CASE WHEN j1.time_to BETWEEN 12 AND 12.99 THEN Rtrim(Ltrim(CONVERT(
+                     CHAR(6),
+                     j1.time_to)))+ ' pm ' ELSE Rtrim(Ltrim(CONVERT(CHAR(6), j1.time_to-12)))+
+                     ' pm '
+                     END END,
+                     j1.reason,
+                     CONVERT(CHAR(12), j1.encoded_date, 101),
+                     o1.leavestatus,
+                     CASE
+                     WHEN Ltrim(Rtrim(j1.approved_by)) = '---'
+                           AND Ltrim(Rtrim(j1.audit_user)) = '---' THEN 'New Request'
+                     ELSE
+                        CASE
+                           WHEN Ltrim(Rtrim(j1.approved_by)) != '---'
+                              AND Ltrim(Rtrim(j1.audit_user)) = '---' THEN
+                           'Reviewed | Unapproved'
+                           ELSE
+                           CASE
+                              WHEN Ltrim(Rtrim(j1.approved_by)) != '---'
+                                    AND Ltrim(Rtrim(j1.audit_user)) != '---' THEN
+                              'Reviewed | Approved'
+                              ELSE
+                                 CASE
+                                 WHEN Ltrim(Rtrim(j1.approved_by)) = '---'
+                                       AND Ltrim(Rtrim(j1.audit_user)) != '---' THEN
+                                 'Approved | Approved'
+                                 END
+                           END
+                        END
+                     END AS apphead
+            FROM   ot_file j1
+                     LEFT JOIN ref_emp_mast k1
+                           ON j1.emp_no = k1.emp_no
+                     LEFT JOIN ref_ot_code l1
+                           ON j1.ot_code = l1.ot_code
+                     LEFT JOIN ref_emp_trans m1
+                           ON m1.emp_no = j1.emp_no
+                     LEFT JOIN ref_leavestat o1
+                           ON o1.leavestatusid = j1.leavestatusid
+                     LEFT JOIN ref_hris_approver p1
+                           ON j1.emp_no = p1.emp_no
+                     LEFT JOIN ref_branch z
+                           ON Substring(Ltrim(Rtrim(k1.emp_no)), 1, 2) =
+                              Ltrim(Rtrim(z.id_prefix))
+            WHERE  m1.br_code LIKE '%%'
+                     AND j1.leavestatusid IN ( '1', '8' )
+                     AND p1.approver_empno = '" . $employee['emp_no'] . "'
+            UNION
+            SELECT j2.controlno,
+                     Rtrim(Ltrim(k2.lastname)) + ', '
+                     + Rtrim(Ltrim(k2.firstname)) + ' '
+                     + Substring(k2.middlename, 1, 1) + '. ('
+                     + Ltrim(Rtrim(z.sitecode)) + ')',
+                     'Undertime ',
+                     CONVERT(CHAR(12), j2.effdate, 101) + '@ ' + CASE WHEN j2.timein BETWEEN 0
+                     AND
+                     11.99 THEN Rtrim(Ltrim(CONVERT(CHAR(6), j2.timein)))+ ' am ' ELSE CASE
+                     WHEN
+                     j2.timein BETWEEN 12 AND 12.99 THEN
+                     Rtrim(Ltrim(CONVERT(CHAR(6), j2.timein)))+
+                     ' pm '
+                     ELSE Rtrim(Ltrim(CONVERT(CHAR(6), j2.timein-12)))+ ' pm ' END END,
+                     CONVERT(CHAR(12), j2.effdate, 101) + '@ ' + CASE WHEN j2.timeout BETWEEN
+                     0 AND
+                     11.99 THEN Rtrim(Ltrim(CONVERT(CHAR(6), j2.timeout)))+ ' am ' ELSE CASE
+                     WHEN
+                     j2.timeout BETWEEN 12 AND 12.99 THEN
+                     Rtrim(Ltrim(CONVERT(CHAR(6), j2.timeout)))+
+                     ' pm '
+                     ELSE Rtrim(Ltrim(CONVERT(CHAR(6), j2.timeout-12)))+ ' pm ' END END,
+                     CASE
+                     WHEN Ltrim(Rtrim(j2.ot_cntno)) != '' THEN
+                     Ltrim(Rtrim(j2.reason)) + ' [Offsetting '
+                     + Ltrim(Rtrim(j2.ot_cntno)) + ']'
+                     ELSE Ltrim(Rtrim(j2.reason))
+                     END,
+                     CONVERT(CHAR(12), j2.encoded_date, 101),
+                     o2.leavestatus,
+                     CASE
+                     WHEN Ltrim(Rtrim(j2.approved_by)) = '---'
+                           AND Ltrim(Rtrim(j2.audit_user)) = '---' THEN 'New Request'
+                     ELSE
+                        CASE
+                           WHEN Ltrim(Rtrim(j2.approved_by)) != '---'
+                              AND Ltrim(Rtrim(j2.audit_user)) = '---' THEN
+                           'Reviewed | Unapproved'
+                           ELSE
+                           CASE
+                              WHEN Ltrim(Rtrim(j2.approved_by)) != '---'
+                                    AND Ltrim(Rtrim(j2.audit_user)) != '---' THEN
+                              'Reviewed | Approved'
+                              ELSE
+                                 CASE
+                                 WHEN Ltrim(Rtrim(j2.approved_by)) = '---'
+                                       AND Ltrim(Rtrim(j2.audit_user)) != '---' THEN
+                                 'Approved | Approved'
+                                 END
+                           END
+                        END
+                     END AS apphead
+            FROM   undertime_file j2
+                     LEFT JOIN ref_emp_mast k2
+                           ON j2.emp_no = k2.emp_no
+                     LEFT JOIN ref_emp_trans m2
+                           ON m2.emp_no = j2.emp_no
+                     LEFT JOIN ref_leavestat o2
+                           ON o2.leavestatusid = j2.leavestatusid
+                     LEFT JOIN ref_hris_approver p2
+                           ON j2.emp_no = p2.emp_no
+                     LEFT JOIN ref_branch z
+                           ON Substring(Ltrim(Rtrim(k2.emp_no)), 1, 2) =
+                              Ltrim(Rtrim(z.id_prefix))
+            WHERE  m2.br_code LIKE '%%'
+                     AND j2.leavestatusid IN ( '1', '8' )
+                     AND p2.approver_empno = '" . $employee['emp_no'] . "'
+            UNION
+            SELECT j3.controlno,
+                     Rtrim(Ltrim(k3.lastname)) + ', '
+                     + Rtrim(Ltrim(k3.firstname)) + ' '
+                     + Substring(k3.middlename, 1, 1) + '. ('
+                     + Ltrim(Rtrim(z.sitecode)) + ')',
+                     'itinerary Approval Request',
+                     CONVERT(CHAR(12), j3.effdate, 101) + '@ ' + CASE WHEN j3.timefr BETWEEN 0
+                     AND
+                     11.99 THEN Rtrim(Ltrim(CONVERT(CHAR(6), j3.timefr)))+ ' am ' ELSE CASE
+                     WHEN
+                     j3.timefr BETWEEN 12 AND 12.99 THEN
+                     Rtrim(Ltrim(CONVERT(CHAR(6), j3.timefr)))+
+                     ' pm '
+                     ELSE Rtrim(Ltrim(CONVERT(CHAR(6), j3.timefr-12)))+ ' pm ' END END,
+                     CONVERT(CHAR(12), j3.effdateto, 101) + '@ '
+                     + CASE WHEN j3.timeto BETWEEN 0 AND 11.99 THEN
+                     Rtrim(Ltrim(CONVERT(CHAR(6), j3.timeto)))+ ' am ' ELSE CASE WHEN
+                     j3.timeto
+                     BETWEEN 12 AND 12.99 THEN Rtrim(Ltrim(
+                     CONVERT(CHAR(6), j3.timeto)))+ ' pm ' ELSE
+                     Rtrim(Ltrim(CONVERT(CHAR(6), j3.timeto-12)))+ ' pm ' END END,
+                     CASE
+                     WHEN Ltrim(Rtrim(j3.ot_cntno)) != '' THEN
+                     Ltrim(Rtrim(j3.remark)) + ' [Offsetting '
+                     + Ltrim(Rtrim(j3.ot_cntno)) + ']'
+                     ELSE Ltrim(Rtrim(j3.remark))
+                     END,
+                     CONVERT(CHAR(12), j3.encoded_date, 101),
+                     o3.leavestatus,
+                     CASE
+                     WHEN Ltrim(Rtrim(j3.approved_by)) = '---'
+                           AND Ltrim(Rtrim(j3.audit_user)) = '---' THEN 'New Request'
+                     ELSE
+                        CASE
+                           WHEN Ltrim(Rtrim(j3.approved_by)) != '---'
+                              AND Ltrim(Rtrim(j3.audit_user)) = '---' THEN
+                           'Reviewed | Unapproved'
+                           ELSE
+                           CASE
+                              WHEN Ltrim(Rtrim(j3.approved_by)) != '---'
+                                    AND Ltrim(Rtrim(j3.audit_user)) != '---' THEN
+                              'Reviewed | Approved'
+                              ELSE
+                                 CASE
+                                 WHEN Ltrim(Rtrim(j3.approved_by)) = '---'
+                                       AND Ltrim(Rtrim(j3.audit_user)) != '---' THEN
+                                 'Approved | Approved'
+                                 END
+                           END
+                        END
+                     END AS apphead
+            FROM   iar_file j3
+                     LEFT JOIN ref_emp_mast k3
+                           ON j3.emp_no = k3.emp_no
+                     LEFT JOIN ref_emp_trans m3
+                           ON m3.emp_no = j3.emp_no
+                     LEFT JOIN ref_leavestat o3
+                           ON o3.leavestatusid = j3.leavestatusid
+                     LEFT JOIN ref_hris_approver q3
+                           ON j3.emp_no = q3.emp_no
+                     LEFT JOIN ref_branch z
+                           ON Substring(Ltrim(Rtrim(k3.emp_no)), 1, 2) =
+                              Ltrim(Rtrim(z.id_prefix))
+            WHERE  m3.br_code LIKE '%%'
+                     AND j3.leavestatusid IN ( '1', '8' )
+                     AND q3.approver_empno = '" . $employee['emp_no'] . "'
+            UNION
+            SELECT a1.controlno,
+                     Rtrim(Ltrim(k.lastname)) + ', '
+                     + Rtrim(Ltrim(k.firstname)) + ' '
+                     + Substring(k.middlename, 1, 1) + '. ('
+                     + Ltrim(Rtrim(z.sitecode)) + ')',
+                     'RSR A DAY ONLY',
+                     CONVERT(CHAR(12), a1.effective_date_fr, 101),
+                     CONVERT(CHAR(12), a1.effective_date_to, 101)
+                     + ' '
+                     + Ltrim(Rtrim(CONVERT(CHAR(6), a1.t_in_r)))
+                     + '>'
+                     + Ltrim(Rtrim(CONVERT(CHAR(6), a1.l_out_r)))
+                     + '>'
+                     + Ltrim(Rtrim(CONVERT(CHAR(6), a1.l_in_r)))
+                     + '>'
+                     + Ltrim(Rtrim(CONVERT(CHAR(6), a1.c_out_r)))
+                     + '>'
+                     + Ltrim(Rtrim(CONVERT(CHAR(6), a1.c_in_r)))
+                     + '>'
+                     + Ltrim(Rtrim(CONVERT(CHAR(6), a1.t_out_r)))
+                     + '>',
+                     Ltrim(Rtrim(a1.reason)),
+                     CONVERT(CHAR(12), a1.encoded_date, 101),
+                     n.leavestatus,
+                     CASE
+                     WHEN Ltrim(Rtrim(a1.approved_by)) = '---'
+                           AND Ltrim(Rtrim(a1.audit_user)) = '---' THEN 'New Request'
+                     ELSE
+                        CASE
+                           WHEN Ltrim(Rtrim(a1.approved_by)) != '---'
+                              AND Ltrim(Rtrim(a1.audit_user)) = '---' THEN
+                           'Reviewed | Unapproved'
+                           ELSE
+                           CASE
+                              WHEN Ltrim(Rtrim(a1.approved_by)) != '---'
+                                    AND Ltrim(Rtrim(a1.audit_user)) != '---' THEN
+                              'Reviewed | Approved'
+                              ELSE
+                                 CASE
+                                 WHEN Ltrim(Rtrim(a1.approved_by)) = '---'
+                                       AND Ltrim(Rtrim(a1.audit_user)) != '---' THEN
+                                 'Approved | Approved'
+                                 END
+                           END
+                        END
+                     END AS apphead
+            FROM   rsr_aday_only_file a1
+                     LEFT JOIN ref_emp_mast k
+                           ON a1.emp_no = k.emp_no
+                     LEFT JOIN ref_emp_trans l
+                           ON l.emp_no = a1.emp_no
+                     LEFT JOIN ref_leavestat n
+                           ON n.leavestatusid = a1.leavestatusid
+                     LEFT JOIN ref_hris_approver p
+                           ON a1.emp_no = p.emp_no
+                     LEFT JOIN ref_branch z
+                           ON Substring(Ltrim(Rtrim(k.emp_no)), 1, 2) =
+                              Ltrim(Rtrim(z.id_prefix))
+            WHERE  l.br_code LIKE '%%'
+                     AND a1.leavestatusid IN ( '1', '8' )
+                     AND p.approver_empno = '" . $employee['emp_no'] . "'
+            UNION
+            SELECT j4.controlno,
+               Rtrim(Ltrim(k4.lastname)) + ', '
+               + Rtrim(Ltrim(k4.firstname)) + ' '
+               + Substring(k4.middlename, 1, 1) + '. ('
+               + Ltrim(Rtrim(z.sitecode)) + ')',
+               'Temporary Attendance Record',
+               CONVERT(CHAR(12), j4.effdate, 101),
+               CONVERT(CHAR(12), j4.effdate, 101) + ' '
+               + Ltrim(Rtrim(CONVERT(CHAR(6), j4.timein)+'>'+CONVERT(CHAR(6), j4.lunchout)+'>'+
+               CONVERT(CHAR(6), j4.lunchin)+'>'+CONVERT(CHAR(6), j4.coffeeout)+'>'+CONVERT(CHAR(6), j4.coffeein)+'>'+CONVERT(CHAR(6), j4.timeout)+'>'+CONVERT(CHAR(6), j4.fye_in)+'>'+CONVERT(CHAR(6), j4.fye_out))),
+               j4.reason,
+               CONVERT(CHAR(12), j4.encoded_date, 101),
+               o4.leavestatus,
+            CASE
+               WHEN Ltrim(Rtrim(j4.approved_by)) = '---'
+                     AND Ltrim(Rtrim(j4.audit_user)) = '---' THEN 'New Request'
+               ELSE
+                  CASE
+                  WHEN Ltrim(Rtrim(j4.approved_by)) != '---'
+                        AND Ltrim(Rtrim(j4.audit_user)) = '---' THEN 'Reviewed | Unapproved'
+                  ELSE
+                     CASE
+                        WHEN Ltrim(Rtrim(j4.approved_by)) != '---'
+                           AND Ltrim(Rtrim(j4.audit_user)) != '---' THEN
+                        'Reviewed | Approved'
+                        ELSE
+                        CASE
+                           WHEN Ltrim(Rtrim(j4.approved_by)) = '---'
+                                 AND Ltrim(Rtrim(j4.audit_user)) != '---' THEN
+                           'Approved | Approved'
+                        END
+                     END
+                  END
+            END AS apphead
+            FROM   tar_file j4
+                     LEFT JOIN ref_emp_mast k4
+                           ON j4.emp_no = k4.emp_no
+                     LEFT JOIN ref_emp_trans m4
+                           ON m4.emp_no = j4.emp_no
+                     LEFT JOIN ref_position n4
+                           ON n4.br_code = m4.br_code
+                              AND n4.div_code = m4.div_code
+                              AND n4.rank_code = m4.rank_code
+                              AND n4.dept_code = m4.dept_code
+                              AND n4.post_code = m4.post_code
+                     LEFT JOIN ref_leavestat o4
+                           ON o4.leavestatusid = j4.leavestatusid
+                     LEFT JOIN ref_hris_approver p4
+                           ON j4.emp_no = p4.emp_no
+                     LEFT JOIN ref_branch z
+                           ON Substring(Ltrim(Rtrim(k4.emp_no)), 1, 2) =
+                              Ltrim(Rtrim(z.id_prefix))
+            WHERE  m4.br_code LIKE '%%'
+                     AND j4.leavestatusid IN ( '1', '8' )
+                     AND j4.isapproved = '0'
+                     AND p4.approver_empno = '" . $employee['emp_no'] . "'
+            ORDER  BY controlno ASC ";
+            $stmt = sqlsrv_query($conn, $query);
+            $clsApproval = new Standard('');
+            $apprData = [];
+            while (sqlsrv_fetch($stmt)) {
+               array_push($apprData, $clsApproval->bindMetaData($stmt));
+            }
+            if (count($apprData)) {
+               $response['error'] = false;
+               $response['status'] = 200;
+               $response['data'] =  $apprData;
+            } else {
+               $response['error'] = true;
+               $response['status'] = 503;
+               $response['message'] = "No data found";
+            }
+         } else {
+            $response['error'] = true;
+            $response['status'] = 503;
+            $response['message'] = "Token unrecognized.";
+         }
+      }
+      if ($_POST['action'] == "approvereq") {
+         $employee = extractEmployee($conn, $MAIN_TOKEN);
+         //Contribution tables checking before update by first 2 digit control number...
+         $contNoSubHeadOk = substr($_POST['controlid'], 0, 2);
+         switch (true) {
+            case ($contNoSubHeadOk == 'CS' || $contNoSubHeadOk == 'CW' || $contNoSubHeadOk == 'CD' || $contNoSubHeadOk == 'LB' || $contNoSubHeadOk == 'CB'):
+               $toTableHeadOk = 'emp_request_master';
+               $Name_j = ",j.lrs_desc as leave_name,case when a.date_from = a.date_to then ltrim(rtrim(convert(char(12),a.date_from))) else ltrim(rtrim(convert(char(12),a.date_from)))+ltrim(rtrim(convert(char(12),a.date_to))) end as reqdate ";
+               $l_Join = "left join ref_lrs_type j on a.lrs_type = j.lrs_type ";
+               break;
+
+            case ($contNoSubHeadOk == 'LV'):
+               $toTableHeadOk = 'leave_trans';
+               $Name_j = ",j.leave_name as leave_name,case when a.date_fto = a.date_ffrom then ltrim(rtrim(convert(char(12),a.date_fto))) else ltrim(rtrim(convert(char(12),a.date_ffrom)))+ltrim(rtrim(convert(char(12),a.date_fto))) end as reqdate ";
+               $l_Join = "left join ref_leave_code j on a.leave_code = j.leave_code  ";
+               break;
+
+            case ($contNoSubHeadOk == 'TR'):
+               $toTableHeadOk = 'tar_file';
+               $Name_j = ",'Temporary Attendance Record' as leave_name,ltrim(rtrim(convert(char(12),a.effdate)))+' @ '+convert(char(6),a.timein)+' | '+convert(char(6),a.lunchout)+' | '+convert(char(6),a.lunchin)+' | '+convert(char(6),a.coffeeout)+' | '+convert(char(6),a.coffeein)+' | '+convert(char(6),a.timeout)+' | '+convert(char(6),a.fye_in)+' | '+convert(char(6),a.fye_out) as reqdate ";
+               $l_Join = "";
+
+               break;
+
+
+            case ($contNoSubHeadOk == 'OT'):
+               $toTableHeadOk = 'ot_file';
+               $Name_j = ",'Overtime @ '+j.ot_name as leave_name,ltrim(rtrim(convert(char(12),a.date)))+' @ '+convert(char(6),a.time_from)+' to '+convert(char(6),a.time_to) as reqdate ";
+               $l_Join = "left join ref_ot_code j on a.ot_code = j.ot_code ";
+
+               break;
+
+            case ($contNoSubHeadOk == 'UN'):
+               $toTableHeadOk = 'undertime_file';
+               $Name_j = ",'Undertime ' as leave_name,'Hours rendered: '+ltrim(rtrim(convert(char(12),a.effdate)))+' @ '+convert(char(6),a.timein)+' | '+convert(char(6),a.timeout) as reqdate ";
+               $l_Join = "";
+               break;
+            case ($contNoSubHeadOk == 'IA'):
+               $toTableHeadOk = 'iar_file';
+               $Name_j = ",'Itinerary Approval Report ' as leave_name,ltrim(rtrim(convert(char(12),a.effdate)))+' @ '+convert(char(6),a.timefr)+' | '+convert(char(6),a.timeto) as reqdate ";
+               $l_Join = "";
+               break;
+            case ($contNoSubHeadOk == 'AD'):
+               $toTableHeadOk = 'rsr_aday_only_file';
+               $Name_j = ",'RSR A DAY ONLY' as leave_name,ltrim(rtrim(convert(char(12),a.effective_date_fr)))+' @ '+convert(char(6),a.effective_date_to)+' | '+ convert(char(6),a.t_in_r)+ ' | '+convert(char(6),a.l_out_r)+' | '+convert(char(6),a.l_in_r)+' | '+convert(char(6),a.c_out_r)+' | '+convert(char(6),a.c_in_r)+' | '+convert(char(6),a.t_out_r) as reqdate ";
+               $l_Join = "";
+               break;
+
+            default:
+               $response['error'] = false;
+               $response['status'] = 'error';
+               $response['message'] = "System ERROR! (unrecognize control number)";
+               echo json_encode($response);
+               die();
+         }
+
+         //check for requestor employee number
+         $qryRequestor = "select emp_no,leavestatusid from " . $toTableHeadOk . " where controlno = '" . $_POST['controlid'] . "' ";
+
+         $resultRequestorEmpno = sqlsrv_query($conn, $qryRequestor);
+         $employee['emp_no'] = "9900628";
+         while ($empnumber = sqlsrv_fetch_object($resultRequestorEmpno)) {
+
+
+            //select approver's position (Manager/Supervisor)
+            $qryappRank = "select top 1 case when (select count(emp_no) from ref_hris_approver where emp_no = '" . trim($empnumber->emp_no) . "')= 1 then 'Approver' ";
+            $qryappRank .= "when a.approver_rank_code > b.approver_rank_code then 'Reviewer' ";
+            $qryappRank .= "when a.approver_rank_code = b.approver_rank_code then 'Approver' ";
+            $qryappRank .= "when a.approver_rank_code < b.approver_rank_code then 'Approver' end as approver_login_as ";
+            $qryappRank .= "from (select * from ref_hris_approver where emp_no = '" . trim($empnumber->emp_no) . "' and approver_empno = '" . trim($employee['emp_no']) . "') a  ";
+            $qryappRank .= "left join (select * from ref_hris_approver where emp_no = '" . trim($empnumber->emp_no) . "' and approver_empno != '" . trim($employee['emp_no']) . "') b on a.emp_no = b.emp_no  ";
+
+            $responseppRank = sqlsrv_query($conn, $qryappRank);
+            while ($appRank = sqlsrv_fetch_object($responseppRank)) {
+               if ($appRank->approver_login_as == "Reviewer" and $empnumber->leavestatusid == 1) {
+                  //update leave trans on selected Filed user leave under supervisor
+                  $queryUpd = "update " . $toTableHeadOk . " set leavestatusid = '8',approved_by = '" . $employee['logname'] . "',isapproved = '0',approved_date = getdate(),remarks ='Reviewed by: <br/>" . $employee['logname'] . ' - ' . str_replace('\'', '`', $employee['position']) . ' (' . trim($appRank->approver_login_as) . ')<br/>' . "' where controlno = '" . $_POST['controlid'] . "'";
+                  $apprem = "Reviewed by: " . $employee['logname'] . "-" . str_replace('\'', '`', $employee['position']) . " (" . trim($appRank->approver_login_as) . ")";
+               } else {
+                  //update leave trans on selected Filed user leave under 2x supervisor/direct manager
+                  $queryUpd = "update " . $toTableHeadOk . " set leavestatusid = '2',audit_user = '" . $employee['logname'] . "',isapproved = '1',approved_date = getdate(),remarks =ltrim(rtrim(remarks))+'Approved by: <br/>" . $employee['logname'] . ' - ' . str_replace('\'', '`', $employee['position']) . ' (' . trim($appRank->approver_login_as) . ')' . "' where controlno = '" . $_POST['controlid'] . "'";
+                  $apprem = "Approved by: " . $employee['logname'] . "-" . str_replace('\'', '`', $employee['position']) . " (" . trim($appRank->approver_login_as) . ")";
+               }
+            }
+         }
+         $resultUpd = sqlsrv_query($conn, $queryUpd);
+         if ($resultUpd) {
+            $response['error'] = false;
+            $response['status'] = '200';
+            $response['message'] = 'Request Approved!';
+         } else {
+            $response['error'] = true;
+            $response['status'] = '503';
+            $response['message'] = 'Request was not processed';
+         }
+
+
+         $qryRequeststat = "select b.leavestatus,a.encoded_date as datefiled,ltrim(rtrim(c.lastname))+', '  +ltrim(rtrim(c.firstname))+' '+upper(substring(ltrim(rtrim(c.middlename)),1,1))+'.' as name,
+               h.br_name,i.email" . $Name_j . "
+               from " . $toTableHeadOk . " a
+               left join  ref_leavestat b on a.leavestatusid = b.leavestatusid
+               left join ref_emp_mast c on a.emp_no = c.emp_no
+               left join ref_emp_trans d on d.emp_no = c.emp_no
+               left join ref_position e on d.br_code = e.br_code and d.div_code = e.div_code
+               and d.rank_code = e.rank_code and d.dept_code = e.dept_code and d.post_code = e.post_code
+               left join hris_mainLogIn f on c.emp_no =  f.temp_pass
+               left join ref_department g on g.br_code = d.br_code and g.div_code = d.div_code and g.dept_code = d.dept_code
+               left join ref_branch h on g.br_code = h.br_code
+               left join eversql.ehelpdesk.dbo.employee i on i.emp_no = c.emp_no and i.is_active = 1
+               " . $l_Join . "
+               where a.controlno = '" . $_POST['controlid'] . "'";
+         $resultRequeststat = sqlsrv_query($qryRequeststat);
+         while ($reqstat = sqlsrv_fetch_object($resultRequeststat)) {
+            $reStat = $reqstat->leavestatus;
+            $dateFiled = $reqstat->datefiled;
+            $reqname = $reqstat->name;
+            $reqmail = $reqstat->email;
+            $reqbr = $reqstat->br_name;
+            $reqleavename = $reqstat->leave_name;
+            $reqdate = $reqstat->reqdate;
+         }
+
+
+         $leave_type = trim($reqleavename);
+         $date_filed = $dateFiled;
+         $control_no = $_POST['controlid'];
+         $lceff_date = $reqdate;
+         $reqstat   = trim($reStat);
+         $branch     = strtoupper($reqbr);
+         $reason    = '<strong>' . $apprem . '</strong>';
+
+         $mailer = new Mailer();
+         $mailer_from = $mailer->get_sender($employee['emp_no']);
+         $table = $mailer->get_table($control_no);
+         $reqmail = $mailer->get_recipient_approve($control_no, $table);
+         $mailer_send = $mailer->mailformat_approve($reqname, $leave_type, $date_filed, $control_no, $branch, $lceff_date, $reason, $mailer_from, $reqmail, $reqstat);
+      }
+      if ($_POST['action'] == "deletereq") {
+         $employee = extractEmployee($conn, $MAIN_TOKEN);
+         $contNoSubHeadOk = substr($_POST['controlid'], 0, 2);
+         $employee['emp_no'] = "9900628";
+         switch (true) {
+            case ($contNoSubHeadCancel == 'CS' || $contNoSubHeadCancel == 'CW' || $contNoSubHeadCancel == 'CD' || $contNoSubHeadCancel == 'LB' || $contNoSubHeadCancel == 'CB'):
+               $toTableHeadCancel = 'emp_request_master';
+               $Name_j = ",j.lrs_desc as leave_name,case when a.date_from = a.date_to then ltrim(rtrim(convert(char(12),a.date_from))) else ltrim(rtrim(convert(char(12),a.date_from)))+ltrim(rtrim(convert(char(12),a.date_to))) end as reqdate ";
+               $l_Join = "left join ref_lrs_type j on a.lrs_type = j.lrs_type ";
+               break;
+
+            case ($contNoSubHeadCancel == 'LV'):
+               $toTableHeadCancel = 'leave_trans';
+               $Name_j = ",j.leave_name as leave_name,case when a.date_fto = a.date_ffrom then ltrim(rtrim(convert(char(12),a.date_fto))) else ltrim(rtrim(convert(char(12),a.date_ffrom)))+ltrim(rtrim(convert(char(12),a.date_fto))) end as reqdate ";
+               $l_Join = "left join ref_leave_code j on a.leave_code = j.leave_code  ";
+               break;
+
+            case ($contNoSubHeadCancel == 'TR'):
+               $toTableHeadCancel = 'tar_file';
+               $Name_j = ",'Temporary Attendance Record' as leave_name,ltrim(rtrim(convert(char(12),a.effdate)))+' @ '+convert(char(6),a.timein)+' | '+convert(char(6),a.lunchout)+' | '+convert(char(6),a.lunchin)+' | '+convert(char(6),a.coffeeout)+' | '+convert(char(6),a.coffeein)+' | '+convert(char(6),a.timeout)+' | '+convert(char(6),a.fye_in)+' | '+convert(char(6),a.fye_out)as reqdate ";
+               $l_Join = "";
+               break;
+
+            case ($contNoSubHeadCancel == 'OT'):
+               $toTableHeadCancel = 'ot_file';
+               $Name_j = ",'Overtime @ '+j.ot_name as leave_name,ltrim(rtrim(convert(char(12),a.date)))+' @ '+convert(char(6),a.time_from)+' to '+convert(char(6),a.time_to) as reqdate ";
+               $l_Join = "left join ref_ot_code j on a.ot_code = j.ot_code ";
+               break;
+
+            case ($contNoSubHeadCancel == 'UN'):
+               $toTableHeadCancel = 'undertime_file';
+               $Name_j = ",'Undertime ' as leave_name,'Hours rendered: '+ltrim(rtrim(convert(char(12),a.effdate)))+' @ '+convert(char(6),a.timein)+' | '+convert(char(6),a.timeout) as reqdate ";
+               $l_Join = "";
+               break;
+
+            case ($contNoSubHeadCancel == 'IA'):
+               $toTableHeadCancel = 'iar_file';
+               $Name_j = ",'Itinerary Approval Report ' as leave_name,ltrim(rtrim(convert(char(12),a.effdate)))+' @ '+convert(char(6),a.timefr)+' | '+convert(char(6),a.timeto) as reqdate ";
+               $l_Join = "";
+               break;
+
+            case ($contNoSubHeadCancel == 'AD'):
+               $toTableHeadCancel = 'rsr_aday_only_file';
+               $Name_j = ",'RSR A DAY ONLY' as leave_name,ltrim(rtrim(convert(char(12),a.effective_date_fr)))+' @ '+convert(char(6),a.effective_date_to)+' | '+ convert(char(6),a.t_in_r)+ ' | '+convert(char(6),a.l_out_r)+' | '+convert(char(6),a.l_in_r)+' | '+convert(char(6),a.c_out_r)+' | '+convert(char(6),a.c_in_r)+' | '+convert(char(6),a.t_out_r) as reqdate ";
+               $l_Join = "";
+               break;
+
+            default:
+               $response['error'] = true;
+               $response['status'] = 'error';
+               $response['message'] = "System ERROR! (unrecognize control number)";
+               echo json_encode($response);
+               die();
+         }
+
+         //balik value if cancel
+         $tableCancel = array("emp_request_master", "undertime_file");
+         if (in_array(trim($toTableHeadCancel), $tableCancel)) {
+            $qryDel = "select * from " . $toTableHeadCancel . " where leavestatusid in ('1','8') and isapproved = '0' and controlno = '" . $_POST['controlid'] . "'";
+            $resultDel = sqlsrv_query($qryDel);
+
+            while ($offSetRows = sqlsrv_fetch_object($resultDel)) {
+               $isOffset = $offSetRows->isoffset;
+            }
+
+            if ($isOffset == 1) {
+               sqlsrv_query("update ot_file set ut_cntno = null,used_un_hrs = 0,remain_hrs = no_of_hrs,isused = 0 where ut_cntno = '" . $_POST['controlid'] . "'
+								 update " . $toTableHeadCancel . " set approved_date = getdate() ,ot_cntno = 'cancelled',used_ot_hrs = 0 where controlno = '" . $_POST['controlid'] . "'");
+            }
+         }
+
+
+         //Set dis approved into upproved if request is not a authorized leave
+         if ($contNoSubHeadCancel == 'CS') {
+            //update leave trans on selected Filed user leave under head
+            $queryUpd = "update " . $toTableHeadCancel . " set lrs_type = 'LOAU',leavestatusid = '2',approved_by = '" . $employee['logname'] . "',remarks = '" . trim($lCancelReq) . "',approved_date = getdate() where controlno = '" . $_POST['controlid'] . "'";
+            $resultUpd = sqlsrv_query($queryUpd);
+
+            $response['error'] = false;
+            $response['status'] = 'success';
+            $response['message'] = 'Request set as Unauthorized!';
+
+
+            $qryRequeststat = "select b.leavestatus,a.encoded_date as datefiled,ltrim(rtrim(c.lastname))+', '+ltrim(rtrim(c.firstname))+' '+upper(substring(ltrim(rtrim(c.middlename)),1,1))+'.' as name,
+				h.br_name,i.email" . $Name_j . "
+				from " . $toTableHeadCancel . " a
+				left join  ref_leavestat b on a.leavestatusid = b.leavestatusid
+				left join ref_emp_mast c on a.emp_no = c.emp_no
+				left join ref_emp_trans d on d.emp_no = c.emp_no
+				left join ref_position e on d.br_code = e.br_code and d.div_code = e.div_code
+				and d.rank_code = e.rank_code and d.dept_code = e.dept_code and d.post_code = e.post_code
+				left join hris_mainLogIn f on c.emp_no =  f.temp_pass
+				left join ref_department g on g.br_code = d.br_code and g.div_code = d.div_code and g.dept_code = d.dept_code
+				left join ref_branch h on g.br_code = h.br_code
+				left join eversql.ehelpdesk.dbo.employee i on i.emp_no = c.emp_no and i.is_active = 1
+				" . $l_Join . "
+				where a.controlno = '" . $_POST['controlid'] . "' ";
+
+            $resultRequeststat = sqlsrv_query($qryRequeststat);
+            while ($reqstat = sqlsrv_fetch_object($resultRequeststat)) {
+               $reStat = $reqstat->leavestatus;
+               $dateFiled = $reqstat->datefiled;
+               $reqname = $reqstat->name;
+               $reqmail = $reqstat->email;
+               $reqbr = $reqstat->br_name;
+               $reqleavename = $reqstat->leave_name;
+               $reqdate = $reqstat->reqdate;
+            }
+
+            $leave_type = trim($reqleavename);
+            $date_filed = $dateFiled;
+            $control_no = $_POST['controlid'];
+            $lceff_date = $reqdate;
+            $reqstat   = trim($reStat);
+            $branch     = strtoupper($reqbr);
+            $reason    = '<strong>' . trim($lCancelReq) . '</strong>';
+
+
+            //remove this section (this is for auto sending of mail)
+            $mailer = new Mailer();
+            $mailer_from = $mailer->get_sender($employee['emp_no']);
+            $table = $mailer->get_table($control_no);
+            $reqmail = $mailer->get_recipient_approve($control_no, $table);
+            $mailer_send = $mailer->mailformat_approve($reqname, $leave_type, $date_filed, $control_no, $branch, $lceff_date, $reason, $mailer_from, $reqmail, $reqstat);
+
+            echo json_encode($response);
+            die();
+         } else {
+            //update leave trans on selected Filed user leave under head
+            $queryUpd = "update " . $toTableHeadCancel . " set leavestatusid = '5',approved_by = '" . $employee['logname'] . "',remarks = '" . trim($lCancelReq) . "',approved_date = getdate() where controlno = '" . $_POST['controlid'] . "'";
+            $resultUpd = sqlsrv_query($queryUpd);
+
+            $response['error'] = false;
+            $response['status'] = 'success';
+            $response['message'] = 'Request Canceled!';
+
+
+            $qryRequeststat = "select b.leavestatus,a.encoded_date as datefiled,ltrim(rtrim(c.lastname))+', '+ltrim(rtrim(c.firstname))+' '+upper(substring(ltrim(rtrim(c.middlename)),1,1))+'.' as name,h. br_name,i.email" . $Name_j . "
+               from " . $toTableHeadCancel . " a
+               left join  ref_leavestat b on a.leavestatusid = b.leavestatusid
+               left join ref_emp_mast c on a.emp_no = c.emp_no
+               left join ref_emp_trans d on d.emp_no = c.emp_no
+               left join ref_position e on d.br_code = e.br_code and d.div_code = e.div_code
+               and d.rank_code = e.rank_code and d.dept_code = e.dept_code and d.post_code = e.post_code
+               left join hris_mainLogIn f on c.emp_no =  f.temp_pass
+               left join ref_department g on g.br_code = d.br_code and g.div_code = d.div_code and g.dept_code = d.dept_code
+               left join ref_branch h on g.br_code = h.br_code
+               left join eversql.ehelpdesk.dbo.employee i on i.emp_no = c.emp_no and i.is_active = 1
+               " . $l_Join . "
+               where a.controlno = '" . $_POST['controlid'] . "' ";
+
+            $resultRequeststat = sqlsrv_query($qryRequeststat);
+            while ($reqstat = sqlsrv_fetch_object($resultRequeststat)) {
+               $reStat = $reqstat->leavestatus;
+               $dateFiled = $reqstat->datefiled;
+               $reqname = $reqstat->name;
+               $reqmail = $reqstat->email;
+               $reqbr = $reqstat->br_name;
+               $reqleavename = $reqstat->leave_name;
+               $reqdate = $reqstat->reqdate;
+            }
+
+
+            $leave_type = trim($reqleavename);
+            $date_filed = $dateFiled;
+            $control_no = $_POST['controlid'];
+            $lceff_date = $reqdate;
+            $reqstat   = trim($reStat);
+            $branch     = strtoupper($reqbr);
+            $reason    = '<strong>' . trim($lCancelReq) . '</strong>';
+
+            $mailer = new Mailer();
+            $mailer_from = $mailer->get_sender($employee['emp_no']);
+            $table = $mailer->get_table($control_no);
+            $reqmail = $mailer->get_recipient_approve($control_no, $table);
+            $mailer_send = $mailer->mailformat_approve($reqname, $leave_type, $date_filed, $control_no, $branch, $lceff_date, $reason, $mailer_from, $reqmail, $reqstat);
+         }
+      }
    } else {
       $response['error'] = true;
       $response['status'] = 503;
@@ -1226,7 +2152,7 @@ if ($_SERVER['HTTP_AUTORIZATION']) {
 function extractEmployee($conn, $MAIN_TOKEN)
 {
    $Employee = new Standard("");
-   $_query1 = "select rtrim(ltrim(a.emp_no)) as emp_no,g.br_name,rtrim(ltrim(d.deptname)) as department,ltrim(rtrim(a.firstname))+'.'+ltrim(rtrim(a.lastname)) as log_name, ltrim(rtrim(a.lastname))+', '+ltrim(rtrim(a.firstname))+' '+substring(ltrim(rtrim(middlename)), 1, 1)+'.' as name, ltrim(rtrim(g.id_prefix)) as id_prefix from ref_emp_mast a left join ref_emp_trans b on a.emp_no = b.emp_no left join ref_position c on b.br_code = c.br_code and b.div_code = c.div_code and b.rank_code = c.rank_code and b.dept_code = c.dept_code and b.post_code = c.post_code left join ref_department d on d.br_code = b.br_code and d.div_code = b.div_code and d.dept_code = b.dept_code left join hris_mainLogIn e on b.emp_no in (e.user_name,e.temp_pass) left join ref_emp_stat f on f.emp_stat = b.emp_stat and f.br_prefix = b.br_code left join ref_branch g on d.br_code = g.br_code where ( b.emp_stat in ('regu','prob','cont','ojt') and b.date_end is null or date_end > getdate() or date_end = '1900-01-01 00:00:00.000') and e.log_key = 1 and token_id like rtrim(ltrim('" .  $MAIN_TOKEN . "'))";
+   $_query1 = "select rtrim(ltrim(a.emp_no)) as emp_no,g.br_name,c.post_name as position, rtrim(ltrim(d.deptname)) as department,ltrim(rtrim(a.firstname))+'.'+ltrim(rtrim(a.lastname)) as log_name, ltrim(rtrim(a.lastname))+', '+ltrim(rtrim(a.firstname))+' '+substring(ltrim(rtrim(middlename)), 1, 1)+'.' as name, ltrim(rtrim(g.id_prefix)) as id_prefix from ref_emp_mast a left join ref_emp_trans b on a.emp_no = b.emp_no left join ref_position c on b.br_code = c.br_code and b.div_code = c.div_code and b.rank_code = c.rank_code and b.dept_code = c.dept_code and b.post_code = c.post_code left join ref_department d on d.br_code = b.br_code and d.div_code = b.div_code and d.dept_code = b.dept_code left join hris_mainLogIn e on b.emp_no in (e.user_name,e.temp_pass) left join ref_emp_stat f on f.emp_stat = b.emp_stat and f.br_prefix = b.br_code left join ref_branch g on d.br_code = g.br_code where ( b.emp_stat in ('regu','prob','cont','ojt') and b.date_end is null or date_end > getdate() or date_end = '1900-01-01 00:00:00.000') and e.log_key = 1 and token_id like rtrim(ltrim('" .  $MAIN_TOKEN . "'))";
    $stmt1 = sqlsrv_query($conn, $_query1);
    if (sqlsrv_fetch($stmt1)) {
       $empData = $Employee->bindMetaData($stmt1);
@@ -1235,6 +2161,7 @@ function extractEmployee($conn, $MAIN_TOKEN)
       $data['logname'] = $empData['log_name'];
       $data['department'] = $empData['department'];
       $data['br_name'] = $empData['br_name'];
+      $data['position'] = $empData['position'];
       return $data;
    } else {
       return false;

@@ -108,7 +108,6 @@ if ($_POST['action'] == "getattendance") {
    }
 }
 if ($_POST['action'] == "getrequests") {
-
    $data = [];
    $request = new Standard("");
    $_query = "SELECT e.controlno,
@@ -143,7 +142,7 @@ if ($_POST['action'] == "getrequests") {
                         ON e.leavestatusid = g.leavestatusid
                   LEFT JOIN ref_leave_code h
                         ON e.leave_code = h.leave_code
-               WHERE  e.emp_no = '9902158'
+               WHERE  e.emp_no = '" . $_POST['emp_no'] . "'
                UNION
                SELECT x.controlno,
                   x.emp_no,
@@ -175,7 +174,7 @@ if ($_POST['action'] == "getrequests") {
                         ON x.lrs_type = b1.lrs_type
                   LEFT JOIN ref_leavestat c1
                         ON c1.leavestatusid = x.leavestatusid
-               WHERE  x.emp_no = '9902158'
+               WHERE  x.emp_no = '" . $_POST['emp_no'] . "'
                UNION
                SELECT y.controlno,
                   y.emp_no,
@@ -240,7 +239,7 @@ if ($_POST['action'] == "getrequests") {
                         ON y.ot_code = b2.ot_code
                   LEFT JOIN ref_leavestat c2
                         ON y.leavestatusid = c2.leavestatusid
-               WHERE  y.emp_no = '9902158'
+               WHERE  y.emp_no = '" . $_POST['emp_no'] . "'
                UNION
                SELECT z.controlno,
                   z.emp_no,
@@ -294,7 +293,7 @@ if ($_POST['action'] == "getrequests") {
                         ON z.emp_no = a3.emp_no
                   LEFT JOIN ref_leavestat b3
                         ON z.leavestatusid = b3.leavestatusid
-               WHERE  z.emp_no = '9902158'
+               WHERE  z.emp_no = '" . $_POST['emp_no'] . "'
                UNION
                SELECT a.controlno,
                   a.emp_no,
@@ -336,7 +335,7 @@ if ($_POST['action'] == "getrequests") {
                         ON a.emp_no = a1.emp_no
                   LEFT JOIN ref_leavestat a2
                         ON a.leavestatusid = a2.leavestatusid
-               WHERE  a.emp_no = '9902158'
+               WHERE  a.emp_no = '" . $_POST['emp_no'] . "'
                UNION
                SELECT b.controlno,
                   b.emp_no,
@@ -367,7 +366,7 @@ if ($_POST['action'] == "getrequests") {
                         ON b.emp_no = a1.emp_no
                   LEFT JOIN ref_leavestat a2
                         ON b.leavestatusid = a2.leavestatusid
-               WHERE  b.emp_no = '9902158'
+               WHERE  b.emp_no = '" . $_POST['emp_no'] . "'
                UNION
                SELECT
                   x12.controlno,
@@ -396,7 +395,7 @@ if ($_POST['action'] == "getrequests") {
                         ON x12.emp_no = a1.emp_no
                   LEFT JOIN ref_leavestat c1
                         ON c1.leavestatusid = x12.leavestatusid
-               WHERE  x12.emp_no = '9902158'
+               WHERE  x12.emp_no = '" . $_POST['emp_no'] . "'
    ORDER  BY sortdate DESC ";;
    $stmt = sqlsrv_query($conn, $_query);
    while (sqlsrv_fetch($stmt)) {

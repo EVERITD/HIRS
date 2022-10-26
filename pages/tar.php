@@ -24,14 +24,17 @@
    <div class="col">
       <?php require '../components/navbar.php'; ?>
       <div class="container" style="height:calc(100vh - 50px);display:flex; align-items:center; justify-content:center;z-index:99px; ">
+
          <div class="leaveContainer" tabindex="1" style="box-shadow: 10px 10px 32px -18px rgba(0,0,0,1); width: 800px; padding: 0px;">
+
             <p style="background-color: #b82525; padding: 10px 1rem; color:white; font-size: 15px!important">Application for Temporary Attendance Record</p>
+
             <form id="tarform">
                <div class="row" style="padding:0 1rem;">
                   <div class="col-12">
                      <div class="input-group mb-3">
                         <span class="input-group-text" id="basic-addon1">Effective Date :</span>
-                        <input type="date" class="form-control" placeholder="Username" aria-label="Username" aria-describedby="basic-addon1" name="data[effdte]">
+                        <input type="date" class="form-control" placeholder="Username" aria-label="Username" aria-describedby="basic-addon1" name="data[effdte]" id="effdte">
                      </div>
                   </div>
                   <div class="col-12">
@@ -86,24 +89,51 @@
             </div>
          </div>
       </div>
+
+      <!-- SUCCESS -->
+      <div class="alert alert-success alert-dismissible" role="alert" style="position: absolute; top:40px; width:100%">
+         <h4 class="alert-heading">Well done!</h4>
+         <p id="successmsg"></p>
+         <hr>
+         <input type="button" value="Okay" data-dismiss="alert" onclick=" $('.alert-success').hide()">
+      </div>
+
+      <!-- FAILED -->
+      <div class="alert alert-danger alert-dismissible" role="alert" style="position: absolute; top:40px; width:100%">
+         <h4 class="alert-heading">Failed :(</h4>
+         <p id="errormsg"></p>
+         <hr>
+         <input type="button" value="Okay" data-dismiss="alert" onclick="$('.alert-danger').hide()">
+      </div>
+
    </div>
 </div>
 <?php require '../layout/footer.php' ?>
 <script>
    $('input[name="dates"]').daterangepicker();
    async function submitrequest() {
-      const response = await fetch("../controller/transactionController.php", {
-         method: "POST",
-         headers: {
-            'Content-type': 'application/x-www-form-urlencoded',
-            'Autorization': `Bearer ${$('#token').html()}`
-         },
-         body: $('#tarform').serialize() + '&action=TAR'
-      })
-
-      const data = await response.json();
-      if (data) {
-         alert(data.message)
+      if (checkInputFields(['#effdte', '#floatingTextarea'])) {
+         const response = await fetch("../controller/transactionController.php", {
+            method: "POST",
+            headers: {
+               'Content-type': 'application/x-www-form-urlencoded',
+               'Autorization': `Bearer ${$('#token').html()}`
+            },
+            body: $('#tarform').serialize() + '&action=TAR'
+         })
+         const {
+            error,
+            message
+         } = await response.json();
+         if (error) {
+            $('#errormsg').html(message)
+            $('.alert-danger').show()
+         } else {
+            $('#successmsg').html(message)
+            $('.alert-success').show()
+         }
+      } else {
+         alert("check fields")
       }
    }
 </script>

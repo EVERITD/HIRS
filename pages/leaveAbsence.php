@@ -45,6 +45,22 @@
             </div>
          </div>
       </div>
+
+      <div class="alert alert-success alert-dismissible" role="alert" style="position: absolute; top:40px; width:100%">
+         <h4 class="alert-heading">Well done!</h4>
+         <p id="successmsg"></p>
+         <hr>
+         <input type="button" value="Okay" data-dismiss="alert" onclick=" $('.alert-success').hide()">
+      </div>
+
+
+      <div class="alert alert-danger alert-dismissible" role="alert" style="position: absolute; top:40px; width:100%">
+         <h4 class="alert-heading">Failed :(</h4>
+         <p id="errormsg"></p>
+         <hr>
+         <input type="button" value="Okay" data-dismiss="alert" onclick="$('.alert-danger').hide()">
+      </div>
+
    </div>
 </div>
 <?php require '../layout/footer.php' ?>
@@ -66,11 +82,18 @@
          method: 'POST',
          body: `action=LeaveOfAbsence&remarks=${remarks}&dtefrm=${startDate}&dteto=${endDate}&isAuthorized=LOAA&request_type=leave_of_absence`
       })
-      const data = await response.json()
-      if (data['error']) {
-         alert(data['message']);
+      const {
+         error,
+         message
+      } = await response.json()
+      if (error) {
+
+         $('#errormsg').html(message)
+         $('.alert-danger').show()
       } else {
-         alert(data['message']);
+         $('#successmsg').html(message)
+         $('.alert-success').show()
+
       }
       // if(data)
    }

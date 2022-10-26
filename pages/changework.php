@@ -109,6 +109,21 @@
             </div>
          </form>
       </div>
+      <!-- SUCCESS -->
+      <div class="alert alert-success alert-dismissible" role="alert" style="position: absolute; top:40px; width:100%">
+         <h4 class="alert-heading">Well done!</h4>
+         <p id="successmsg"></p>
+         <hr>
+         <input type="button" value="Okay" data-dismiss="alert" onclick=" $('.alert-success').hide()">
+      </div>
+
+      <!-- FAILED -->
+      <div class="alert alert-danger alert-dismissible" role="alert" style="position: absolute; top:40px; width:100%">
+         <h4 class="alert-heading">Failed :(</h4>
+         <p id="errormsg"></p>
+         <hr>
+         <input type="button" value="Okay" data-dismiss="alert" onclick="$('.alert-danger').hide()">
+      </div>
    </div>
 </div>
 <?php require '../layout/footer.php' ?>
@@ -156,8 +171,17 @@
          },
          body: $('#form_changework').serialize() + '&action=CHANGEOFWORKSCHED'
       })
-      const data = await response.json()
-      console.log(data)
+      const {
+         error,
+         message
+      } = await response.json();
+      if (error) {
+         $('#errormsg').html(message)
+         $('.alert-danger').show()
+      } else {
+         $('#successmsg').html(message)
+         $('.alert-success').show()
+      }
 
    }
 </script>

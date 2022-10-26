@@ -29,7 +29,12 @@
    <div class="col">
       <?php require '../components/navbar.php'; ?>
       <div class="container" style="height:calc(100vh - 50px);overflow-y:scroll!important;padding:5px 2rem">
-         <h3 style="font-weight: bold;margin-top: 1rem;">My Attendance</h3>
+         <div class="">
+            <h3 style="font-weight: bold;margin-top: 1rem;"><i class="bi bi-person-video2" style="margin-right:1rem"></i>My Attendance</h3>
+
+            <label for="">Hi! From this page you may view your attedance from your [TIME IN] to [TIME OUT], <br>If there are questions/concerns about your attendance please contact our HR Deparment . </label>
+         </div>
+
          <table style="font-size: 11px;font-weight:bold;padding: 1rem 0; " id="table_id" class="row-border">
             <thead>
                <tr style="background-color: #b82525;color:white; letter-spacing: 1px">
@@ -65,6 +70,7 @@
          </table>
       </div>
    </div>
+
 </div>
 <?php require '../layout/footer.php' ?>
 <script>

@@ -108,6 +108,8 @@
 
 <script>
    // getpostedtransactions()
+   $('.alert-success').hide()
+   $('.alert-danger').hide()
    async function getpostedtransactions() {
       getEmployeeLeaves()
       const response = await fetch("../controller/userController.php", {
@@ -139,7 +141,41 @@
          body: `empno=${$('#emp_no').html()}&action=getLeaves`
       })
       const data = await response.json()
-
       console.log(data)
+   }
+
+
+   function successMsg() {
+      console.log('test success show')
+      $('.alert-success').show()
+   }
+
+   function Close() {
+      console.log('test success close')
+      $('.alert-success').hide()
+   }
+
+   function errorMsg() {
+      console.log('test error show')
+      $('.alert-danger').show()
+   }
+
+   function errorMsg() {
+      console.log('test error close')
+      $('.alert-danger').hide()
+   }
+
+   function checkInputFields(selectorArray) {
+      let response = true;
+      selectorArray.forEach(element => {
+         let input = $(`${element}`).val();
+         if (input == '') {
+            $(`${element}`).css('border', '2px solid red')
+            response = false;
+         } else {
+            $(`${element}`).css('border', '1px solid #ced4da')
+         }
+      });
+      return response
    }
 </script>
