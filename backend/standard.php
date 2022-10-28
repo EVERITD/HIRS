@@ -15,7 +15,6 @@ class Standard
    function selectData($params)
    {
       $filter = $this->genFilter($params);
-
       try {
          $_query = "SELECT * from $this->table where " . $filter;
          $stmt = sqlsrv_query($this->conn, $_query);
@@ -109,7 +108,6 @@ class Standard
    }
    function encryptpass($params)
    {
-
       $sqlencrypta = "exec encrypt_pass '{$params['password']}','{$params['email']}'";
       $sqlencrypteda = sqlsrv_query($this->conn, $sqlencrypta);
       $sqlencryptedRowsa = sqlsrv_fetch_array($sqlencrypteda, SQLSRV_FETCH_NUMERIC);

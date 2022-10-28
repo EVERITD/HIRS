@@ -6,6 +6,9 @@ $response = [];
 if ($_SERVER['HTTP_AUTORIZATION']) {
    $MAIN_TOKEN = trim(str_replace("Bearer", "", $_SERVER['HTTP_AUTORIZATION']));
    $employee = extractEmployee($conn, $MAIN_TOKEN);
+   if ($_POST['emp_no'] != '') {
+      $employee['emp_no'] = $_POST['emp_no'];
+   }
    if ($MAIN_TOKEN && $employee['emp_no'] != '') {
       if ($_POST['action'] == "validateOTsetting") {
          $data = $_POST['data'];

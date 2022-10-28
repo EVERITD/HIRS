@@ -50,9 +50,9 @@ if ($_POST['action'] == 'postedtransactions') {
          $response['vld'] =  $data['vl_count'];
          $response['vlh'] =  $data['hv_count'];
          $response['sld'] = $data['sl_count'];
-         $response['slh'] = $data[' hs_count'];
-         $response['ml'] = $data[' ml_count'];
-         $response['pl'] = $data[' pl_count'];
+         $response['slh'] = $data['hs_count'];
+         $response['ml'] = $data['ml_count'];
+         $response['pl'] = $data['pl_count'];
       } else {
          $response['vld'] = 0;
          $response['vlh'] = 0;
@@ -431,6 +431,51 @@ if ($_POST['action'] == 'getapprover') {
    if (sqlsrv_fetch($stmt)) {
       $clsApprover = new Standard('');
       $response['Approver'] = $clsApprover->bindMetaData($stmt);
+   }
+}
+if ($_POST['action'] == "getLates") {
+
+   $MAIN_TOKEN = trim(str_replace("Bearer", "", $_SERVER['HTTP_AUTORIZATION']));
+   $employee = extractEmployee($conn, $MAIN_TOKEN);
+   $query = "select am_in from ref_emp_trans a left join ref_schedule b on a.shift_code = b.shift_code and a.br_code = b.br_prefix where a.emp_no = '" . $employee['emp_no'] . "' ";
+   $stmt = sqlsrv_query($conn, $query);
+
+
+   while ($numRowsempSched = sqlsrv_fetch_object($stmt)) {
+
+      $officialTimeIn   = isset($numRowsempSched->am_in) ? $numRowsempSched->am_in : '8.30';
+      $late          = isset($numRowsempSched->am_in) ? number_format($numRowsempSched->am_in + 0.06, 2, '.', '') : '8.36';
+      $latePenalty    = isset($numRowsempSched->am_in) ? number_format($numRowsempSched->am_in + 0.15, 2, '.', '') : '8.45';
+   }
+
+   $queryLate    = "select case when len(ltrim(rtrim(cast(dbo.converthrs_min(in1)- dbo.converthrs_min($officialTimeIn) as varchar)))) = 1 then ' Time In '+cast(in1 as varchar)+' '+ltrim(rtrim(convert(char(10),date,111)))+' - 0'+ ";
+
+   $queryLate .= "ltrim(rtrim(cast(dbo.converthrs_min(in1)- dbo.converthrs_min($officialTimeIn) as varchar)))+ ' mins late' else ' Time In '+cast(in1 as varchar)+' '+ltrim(rtrim(convert(char(10),date,111)))+' - '+ ";
+   $queryLate .= "ltrim(rtrim(cast(dbo.converthrs_min(in1)- dbo.converthrs_min($officialTimeIn) as varchar)))+ ' mins late'end as actual_in_date ";
+   $queryLate .= "from pistime where emp_no = '" . $employee['emp_no'] . "' and (date between (getdate()-30) and getdate()) and in1 > '" . $late . "' and substring(emp_no,1,2) = '99' order by date desc ";
+   $stmtLate = sqlsrv_query($conn, $queryLate);
+   $clsLates = new Standard('');
+   $response['data'] = [];
+   while (sqlsrv_fetch($stmtLate)) {
+      array_push($response['data'], $clsLates->bindMetaData($stmtLate));
+   }
+   $response['message'] = "Success!";
+   $response['error'] = false;
+}
+if ($_POST['action'] == "getbranchemp") {
+   $idprefix = $_POST['idprefix'];
+   $bremp = "select ltrim(rtrim(a.emp_no))+' ~ '+b.emp_stat+' ~ '+LTRIM(RTRIM(firstname))+' '+LTRIM(RTRIM(middlename))+' '+LTRIM(RTRIM(lastname)) as name,
+			LTRIM(rtrim(a.emp_no)) as empno
+			from ref_emp_mast a
+			left join ref_emp_trans b on a.emp_no = b.emp_no
+			where (b.emp_stat in ('regu','prob','cont','ojt') and b.date_end is null or b.date_end > getdate() or b.date_end = '1900-01-01 00:00:00.000') and a.emp_no like '$idprefix%'
+			order by LTRIM(RTRIM(firstname))+' '+LTRIM(RTRIM(middlename))+' '+LTRIM(RTRIM(lastname)) asc";
+   $brqry = sqlsrv_query($conn, $bremp);
+   while ($brrow = sqlsrv_fetch_object($brqry)) {
+      $response['data']->bremployee[] = array(
+         'name'  => utf8_encode($brrow->name),
+         'empno' => $brrow->empno
+      );
    }
 }
 

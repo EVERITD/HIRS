@@ -2,6 +2,8 @@
 session_start();
 if (strtolower($_POST['action']) == 'logout') {
    session_destroy();
+   $_SESSION['user'] = null;
+   $_SESSION['token'] = '';
    // header("Location: ../pages/login.php");
 }
 

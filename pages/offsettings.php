@@ -267,7 +267,7 @@
             $('#total_no_hrs').css("opacity", '1')
          }
       } else {
-         alert("FYE can only be used for MULTI-OFFSETTINGS, Please try other options!")
+         alert("Fiscal Year End cannot be used for MULTI-OFFSETTINGS, Please try other options.")
       }
    }
 
@@ -327,7 +327,6 @@
       }
       getOTControl();
    }
-
 
    async function validateSet() {
       let totalsethrs = parseFloat($('#total_no_hrs').html());

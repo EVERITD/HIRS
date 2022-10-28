@@ -34,9 +34,8 @@
       <?php require '../components/navbar.php'; ?>
       <div class="container" style="height:calc(100vh - 50px);overflow-y:scroll!important;padding:5px 2rem">
          <h3 style="font-weight: bold;margin-top: 1rem;">Validations</h3>
-         <label for="">All your request are gathered in this table, You can also view its status whether it is Deleted, For Approval, In-Process, Cancelled. <br>
-            <i class="bi bi-folder-x" id="deleteBtn" style="font-size:15px; cursor:pointer; color:red"></i> Means you can still cancel your request.
-            <i class="bi bi-bookmark-check" id="deleteBtn" style="font-size:15px; cursor:pointer; color:green"></i> Means your request has been confirm whether it is is Deleted, For Approval, In-Process, Cancelled. </label>
+         <label for="">In publishing and graphic design, Lorem ipsum is a placeholder text commonly used to demonstrate the visual form of a document or a typeface without relying on meaningful content. Lorem ipsum may be used as a placeholder before final copy is available.<br>
+         </label>
          <hr>
          <table style="font-size: 11px;font-weight:bold;padding: 1rem 0; " id="table_id" class="row-border">
             <thead>
@@ -59,9 +58,6 @@
 </div>
 <?php require '../layout/footer.php' ?>
 <script>
-   // $('#table_id').DataTable()
-
-
    let attendanceTable = $('#table_id').DataTable({
       ordering: false,
       searching: false,

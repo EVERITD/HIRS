@@ -21,8 +21,6 @@ if ($_SERVER['HTTP_AUTORIZATION']) {
          $emp_name = "";
          $br_name = "";
 
-
-
          $Employee = new Standard("");
          $_query1 = "select rtrim(ltrim(a.emp_no)) as emp_no,g.br_name,rtrim(ltrim(d.deptname)) as department,ltrim(rtrim(a.firstname))+'.'+ltrim(rtrim(a.lastname)) as log_name, ltrim(rtrim(a.lastname))+', '+ltrim(rtrim(a.firstname))+' '+substring(ltrim(rtrim(middlename)), 1, 1)+'.' as name, ltrim(rtrim(g.id_prefix)) as id_prefix from ref_emp_mast a left join ref_emp_trans b on a.emp_no = b.emp_no left join ref_position c on b.br_code = c.br_code and b.div_code = c.div_code and b.rank_code = c.rank_code and b.dept_code = c.dept_code and b.post_code = c.post_code left join ref_department d on d.br_code = b.br_code and d.div_code = b.div_code and d.dept_code = b.dept_code left join hris_mainLogIn e on b.emp_no in (e.user_name,e.temp_pass) left join ref_emp_stat f on f.emp_stat = b.emp_stat and f.br_prefix = b.br_code left join ref_branch g on d.br_code = g.br_code where ( b.emp_stat in ('regu','prob','cont','ojt') and b.date_end is null or date_end > getdate() or date_end = '1900-01-01 00:00:00.000') and e.log_key = 1 and token_id like rtrim(ltrim('" . $token . "'))";
          $stmt1 = sqlsrv_query($conn, $_query1);
@@ -34,6 +32,11 @@ if ($_SERVER['HTTP_AUTORIZATION']) {
             $department = $empData['department'];
             $br_name = $empData['br_name'];
          }
+
+         if ($_POST['emp_no'] != '') {
+            $emp_no  = $_POST['emp_no'];
+         }
+
 
          //Check or Insert Approver
          //Automatically Inserts Approver if no approver is present
@@ -169,6 +172,9 @@ if ($_SERVER['HTTP_AUTORIZATION']) {
             $continue = true;
          }
 
+         if ($_POST['emp_no']) {
+            $emp_no = $_POST['emp_no'];
+         }
          if ($continue) {
             $data = $_POST['data'];
 
@@ -179,17 +185,17 @@ if ($_SERVER['HTTP_AUTORIZATION']) {
             $params['lunchout'] = $data['lbOut'] ? str_replace(":", ".", $data['lbOut']) : 0;
             $params['coffeein'] = $data['cbIn'] ? str_replace(":", ".", $data['cbIn']) : 0;
             $params['coffeeout'] = $data['cbOut'] ? str_replace(":", ".", $data['cbOut']) : 0;
-            $params['effdate'] = date("Y-m-d", strtotime($data['effdte']));
+            $params['effdate'] = date("m/d/Y ", strtotime($data['effdte']));
             $params['reason'] =  $data['remarks'];
 
 
-            $tarCheckQuery = "select CONVERT(VARCHAR(10),effdate, 101) as effdate,timein,timeout,leavestatusid,encoded_by,encoded_date,isapproved from tar_file where emp_no = '" . $emp_no . "' and CONVERT(VARCHAR(10),effdate, 101) like '" .  $params['effdate'] . "' and leavestatusid not in ('6','5') ";
+            $tarCheckQuery = "select CONVERT(VARCHAR(10),effdate, 101) as effdate,timein,timeout,leavestatusid,encoded_by,encoded_date,isapproved from tar_file where emp_no = '" . $emp_no . "' and CONVERT(VARCHAR(10),effdate, 101) like '" .  trim($params['effdate']) . "' and leavestatusid not in ('6','5') ";
 
             $tarCheckStmt = sqlsrv_query($conn, $tarCheckQuery);
             if (sqlsrv_fetch($tarCheckStmt)) {
                $response['status'] = '503';
                $response['error'] = true;
-               $response['message'] = "TAR date already filed, please select new date!";
+               $response['message'] = "Temporary Attendance Record date already filed, please select new date!";
             } else {
                $GCN = new Standard("");
                $controlno = $GCN->generateControlNumber('TR');
@@ -265,7 +271,7 @@ if ($_SERVER['HTTP_AUTORIZATION']) {
                $app_date = date('D', strtotime($params['date'])) == "Sat" ? 'Sat' : 'NotSat';
                $params['isLess1'] = $branch . $app_date;
 
-               $params['emp_no'] = $employee['emp_no'];
+               $params['emp_no'] = $_POST['emp_no'] != '' ? $_POST['emp_no'] : $employee['emp_no'];
                $params['llctype'] = $data['typeDay'];
                $params['ot_code'] = $data['typeofday'];
                $params['log_name'] = $employee['logname'];
@@ -276,7 +282,23 @@ if ($_SERVER['HTTP_AUTORIZATION']) {
                $params['reason'] = $data['remarks'];
                $params['lcfye'] = $data['type_option'] == 'fye' ? 1 : 0;
 
+               $queryOTT = "select CONVERT(VARCHAR(10),date, 101),CONVERT(VARCHAR(10),date, 101) as date,time_from,time_to from ot_file ";
+               $queryOTT .= "where emp_no = '" .  $params['emp_no'] . "' and CONVERT(VARCHAR(10),date, 101) like '" . trim($params['date']) . "'  and cast(substring('" . $params['time_from'] . "',1,5) as decimal(10,2)) between time_from and time_to and leavestatusid not in(6,5) and ot_code = '" . $params['ot_code'] . "' ";
+
+               $stmtOTT = sqlsrv_query($conn, $queryOTT);
+               if (sqlsrv_fetch($stmtOTT)) {
+                  $response['error'] = true;
+                  $response['status'] = 503;
+                  $response['message'] = "Overtime date already filed. Please select new date";
+                  echo json_encode($response);
+                  die();
+               }
+
+
+
                $query_ot = "execute sp_portal_ot_save '" .  $params['llctype'] . "','" .  $params['emp_no'] . "','" . $params['ot_code'] . "','" . $params['date'] . "','" .  $params['time_from'] . "','" .  $params['time_to'] . "','" . $params['reason']  . "','" .   $params['log_name'] . "','" . $params['lcfye'] . "'," . $params['isLess1'] . "";
+
+
                $stmt1 = sqlsrv_query($conn, $query_ot);
 
                $query_ref_ot = "select * from ref_offset_ot where emp_no = '" . $params['emp_no']  . "'";
@@ -329,6 +351,12 @@ if ($_SERVER['HTTP_AUTORIZATION']) {
                      //--------------------------------
 
                      //------------SENDING MAIL AS FOR OLD CODE----------------
+
+                     if ($params['lcfye'] == 1) {
+                        $OT_TYPE = "Fiscal Year End";
+                     } else {
+                        $OT_TYPE = "Overtime";
+                     }
                      $leave_type = "Overtime " .  $OT_name;
                      $date_filed = date('Y-m-d');
                      try {
@@ -336,7 +364,7 @@ if ($_SERVER['HTTP_AUTORIZATION']) {
                         $mailer_from = $Mailer->get_sender($params['emp_no']);
                         $mailer_to = $Mailer->get_recipient($params['emp_no']);
                         $test_mail_to[0]['email'] = "marvin.orsua@ever.ph";
-                        $Mailer->mailformat_request($params['emp_no'], $employee['emp_name'], $leave_type, $date_filed, $controlno, $employee['department'], $employee['br_name'], $params['date'],  $params['reason'], $mailer_from,  $test_mail_to[0]['email']);
+                        $Mailer->mailformat_request($params['emp_no'], $employee['emp_name'], $leave_type, $date_filed, $controlno, $employee['department'], $employee['br_name'], $params['date'],  $params['reason'], $mailer_from,  $test_mail_to);
 
                         $response['status'] = '200';
                         $response['error'] = false;
@@ -346,6 +374,7 @@ if ($_SERVER['HTTP_AUTORIZATION']) {
                         $response['error'] = true;
                         $response['message'] = "Unable to send email, the system will automatically sent this later.";
                         var_dump($th);
+                        die();
                      }
                      // ---------------------------------------------------------
                   }
@@ -357,7 +386,7 @@ if ($_SERVER['HTTP_AUTORIZATION']) {
 
                break;
             case 'UT':
-               $params['emp_no'] = $employee['emp_no'];
+               $params['emp_no'] = $_POST['emp_no'] != '' ? $_POST['emp_no'] : $employee['emp_no'];
                $params['time_from'] = str_replace(":", ".", $data['hourfrom']);
                $params['time_to'] = str_replace(":", ".", $data['hourto']);
                $params['date'] = date_format(date_create($data['date']), "m/d/Y");
@@ -447,6 +476,9 @@ if ($_SERVER['HTTP_AUTORIZATION']) {
             echo json_encode($response);
             die();
          }
+         if ($_POST['emp_no'] != '') {
+            $employee['emp_no'] = $_POST['emp_no'];
+         }
 
          $params['time_from'] = str_replace(":", ".", $data['time_from']);
          $params['time_to'] = str_replace(":", ".", $data['time_to']);
@@ -489,7 +521,7 @@ if ($_SERVER['HTTP_AUTORIZATION']) {
                if ($leftOThrs < 0 || $ot_file_time_bal['isfye'] == "1") {
                   $response['error'] = true;
                   $response['status'] = 503;
-                  $response['message'] = "System has detected FYE overtime for offsetting! </br></br>Please select on wholeday offset only!";
+                  $response['message'] = "System has detected FYE overtime for offsetting! </br></br>Please do not select Fiscal Year End (FYE) overtime!";
                   echo json_encode($response);
                   die();
                }
@@ -586,6 +618,16 @@ if ($_SERVER['HTTP_AUTORIZATION']) {
                   }
                }
 
+               $querychecking = "SELECT CONVERT(VARCHAR(10),effdate,101) from undertime_file where emp_no = '" . $employee['emp_no'] . "' and CONVERT(VARCHAR(10),effdate,101) like '%" . $params['effective_date'] . "' order by controlno desc";
+               $stmtchecking = sqlsrv_query($conn, $querychecking);
+               if (sqlsrv_fetch($stmtchecking)) {
+                  $response['status'] = '503';
+                  $response['error'] = true;
+                  $response['message'] = "Request already filed, Please select other date.";
+                  echo json_encode($response);
+                  die();
+               }
+
                if ($timeSet) {
                   $params['sum_hrs'] = 0; // 
 
@@ -613,7 +655,7 @@ if ($_SERVER['HTTP_AUTORIZATION']) {
 
                      $query_insert = "	Insert into undertime_file (controlno,emp_no,shift_code,effdate,timein,timeout,reason,leavestatusid,encoded_by,encoded_date,isapproved,approved_by,audit_user,isoffset,ot_cntno,used_ot_hrs) 
                      select (select 'UN'+right('00000000'+(select ltrim(rtrim(str(controlno+1))) from ref_controlno 
-                     where module_code = 'UN'),8)) ,'" . $employee['emp_no'] . "','','" . $offDate . "',substring('" . $params['time_from'] . "',1,5), substring('" . $params['time_to'] . "',1,5),'" .  $params['remarks'] . "',1,'" . strtolower($employee['logname']) . "',getdate(),0,'---','---','1','multiple'
+                     where module_code = 'UN'),8)) ,'" . $employee['emp_no'] . "','','" . $params['effective_date'] . "',substring('" . $params['time_from'] . "',1,5), substring('" . $params['time_to'] . "',1,5),'" .  $params['remarks'] . "',1,'" . strtolower($employee['logname']) . "',getdate(),0,'---','---','1','multiple'
                      ,(select dbo.convertmin_hrs((select(select dbo.converthrs_min('" . $params['time_to'] . "'))-(select dbo.converthrs_min('" . $params['time_from'] . "')))) as hrs)
                      from ref_controlno where module_code = 'UN'";
 
@@ -699,6 +741,8 @@ if ($_SERVER['HTTP_AUTORIZATION']) {
                      $response['message'] = "You do not have any schedule. Please contact the administrator";
                      echo json_encode($response);
                   }
+
+
 
                   if ($continue) {
 
@@ -786,7 +830,9 @@ if ($_SERVER['HTTP_AUTORIZATION']) {
       }
       if ($_POST['action'] == "SELECTOT") {
          $employee = extractEmployee($conn, $MAIN_TOKEN);
-
+         if ($_POST['emp_no'] != '') {
+            $employee['emp_no'] = $_POST['emp_no'];
+         }
          $query_OTCONTROL = "select controlno as contNo, no_of_hrs as raw, convert(char(12),date,110) as otdate,replace(time_from,'.',':') as otFrom,replace(time_to,'.',':') as otTo,
          case when (no_of_hrs-used_un_hrs) <= 0 then replace(remain_hrs,'.',' hours ') +
                case when isfye = 1 then ' minutes (FYE)'
@@ -826,6 +872,10 @@ if ($_SERVER['HTTP_AUTORIZATION']) {
          $params['effective_date'] =  date_format(date_create($data['date'] ? $data['date'] : $data['eff_date']), "m/d/Y");
          $params['remarks'] = $data['remarks'];
          $employee = extractEmployee($conn, $MAIN_TOKEN);
+
+         if ($_POST['emp_no'] != '') {
+            $employee['emp_no'] = $_POST['emp_no'];
+         }
          if (!$employee) {
             $response['error'] = true;
             $response['status'] = 503;
@@ -879,6 +929,8 @@ if ($_SERVER['HTTP_AUTORIZATION']) {
                   $insert_coffee_out = "insert into emp_request_detail (controlno,emp_no,sched_type,change_time,encoded_by,encoded_date) select'" .  $controlno  . "','" .  $employee['emp_no'] . "','CBO','" . $params['coffee_out']  . "','" . strtolower($employee['logname']) . "',getdate() ";
 
                   $stmt_timein = sqlsrv_query($conn, $insert_time_in);
+                  var_dump($insert_time_in);
+                  die();
                   $stmt_timeout = sqlsrv_query($conn, $insert_time_out);
                   $stmt_lunchin = sqlsrv_query($conn, $insert_lunch_in);
                   $stmt_lunchout = sqlsrv_query($conn, $insert_lunch_out);
@@ -1225,7 +1277,12 @@ if ($_SERVER['HTTP_AUTORIZATION']) {
 
 
          $employee = extractEmployee($conn, $MAIN_TOKEN);
-
+         if ($_POST['emp_no'] != '') {
+            $employee['emp_no'] = $_POST['emp_no'];
+         }
+         if ($_POST['emp_no'] != '') {
+            $employee['emp_no'] = $_POST['emp_no'];
+         }
          $query_check = "select controlno,emp_no,effdate,effdateto,timefr,timeto,leavestatusid,type,remark,ispis,encoded_by,encoded_date,approved_by,approved_date 
          from iar_file where emp_no = '" . $employee['emp_no'] . "' and ((CONVERT(CHAR(8),effdate, 112) between convert(char(8),cast('" . $params['date_from'] . "' as datetime),112) and 
          convert(char(8),cast('" .  $params['date_to'] . "' as datetime),112)) 
@@ -2148,10 +2205,7 @@ if ($_SERVER['HTTP_AUTORIZATION']) {
       if ($_POST['action'] == 'gethistoryuserlist') {
          $aSearch = $_POST['search'];
          $employee = extractEmployee($conn, $MAIN_TOKEN);
-         $employee['emp_no'] = "9900628";
          $continue = false;
-
-
          if ($employee) {
             $continue = true;
          }
@@ -2189,9 +2243,9 @@ if ($_SERVER['HTTP_AUTORIZATION']) {
          }
       }
       if ($_POST['action'] == 'getuserhistory') {
-         $MAIN_TOKEN = '637b95d2310a4d3e22ad73374ec2996d';
          $selectEmp = '';
          $employee = extractEmployee($conn, $MAIN_TOKEN);
+
          $continue = false;
          if ($employee) {
             $continue = true;
@@ -2223,7 +2277,7 @@ if ($_SERVER['HTTP_AUTORIZATION']) {
                   $rank = 'b.rank_code >= 04';
                   $addQry  = "b.br_code like '%' and d.div_code like '%' and d.dept_code like '%' and $rank and e.emp_no like '" . $selectEmp . "'";
                   $rank1 = 'm.rank_code >= 04';
-                  $addQry1  = "l.br_code = like '%' and m.div_code like '%' and m.dept_code like '%' and $rank1 and j.emp_no like '" . $selectEmp . "'";
+                  $addQry1  = "l.br_code like '%' and m.div_code like '%' and m.dept_code like '%' and $rank1 and j.emp_no like '" . $selectEmp . "'";
                   $rank2 = 'n1.rank_code >= 04';
                   $addQry2  = "m1.br_code like '%' and n1.div_code like '%' and n1.dept_code like '%' and $rank2 and j1.emp_no like '" . $selectEmp . "'";
                   $rank3 = 'n2.rank_code >= 04';

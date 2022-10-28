@@ -126,6 +126,8 @@
    async function getUserHistory({
       id
    }) {
+
+      tableHistory.clear();
       const response = await fetch("../controller/transactionController.php", {
          method: "POST",
          headers: {
@@ -151,8 +153,6 @@
                leaveName,
                leaveStatContent
             } = item
-            // console.log(leaveStatContent)
-            console.log()
             $('#table_id').DataTable().row.add([
                `<p style="font-weight:bold">${controlNo}</p>`,
                encodeDate,
