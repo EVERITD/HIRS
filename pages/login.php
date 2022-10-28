@@ -25,7 +25,7 @@
          <div class="col-6" style="display:flex; align-items:center; justify-content:center; background-image: url('../assets/undraw.png'); background-size:100%; background-repeat:no-repeat; background-position:8rem 10rem;">
             <div class="row loginform" style="width: 280px; padding: 2rem 1rem; box-shadow: 2px 3px 13px -3px rgba(0,0,0,0.45);border-radius: 3px;">
                <div class="col-12" style="text-align: left;">
-                  <h3 style="font-weight: bold;line-height:25px">Welcome to Ever HRIS Portal</h3>
+                  <h3 style="font-weight: bold;line-height:25px">Welcome to Ever HR-FORMS Portal</h3>
                   <p style="font-size: 11px;line-height:10px;font-weight:normal">Let's get you ready. Please enter your username and password</p>
                   <hr>
                </div>

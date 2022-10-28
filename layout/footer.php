@@ -37,21 +37,21 @@
                      <tbody>
                         <tr>
                            <td style="font-size: 13px!important;font-weight:bold;border-right:1px solid black;">VL</td>
-                           <td>0</td>
-                           <td style="border-right:1px solid black;">0</td>
-                           <td>0</td>
-                           <td style="border-right:1px solid black;">0</td>
-                           <td>0</td>
-                           <td>0</td>
+                           <td id="earnvldays">1</td>
+                           <td style="border-right:1px solid black;" id="earnvlhrs">0</td>
+                           <td id="filedvldays"></td>
+                           <td id="filedvlhrs" style="border-right:1px solid black;">0</td>
+                           <td id="balvldays">0</td>
+                           <td id="balvlhrs">0</td>
                         </tr>
                         <tr>
                            <td style="font-size: 13px!important;font-weight:bold;border-right:1px solid black;">SL</td>
-                           <td>0</td>
-                           <td style="border-right:1px solid black;">0</td>
-                           <td>0</td>
-                           <td style="border-right:1px solid black;">0</td>
-                           <td>0</td>
-                           <td>0</td>
+                           <td id="earnsldays">0</td>
+                           <td style="border-right:1px solid black;" id="earnslhrs">0</td>
+                           <td id="filedsldays">0</td>
+                           <td id="filedslhrs" style="border-right:1px solid black;">0</td>
+                           <td id="balsldays">0</td>
+                           <td id="balslhrs">0</td>
                         </tr>
 
                      </tbody>
@@ -83,10 +83,17 @@
                   <hr>
                </div>
                <div class="col-12" style="text-align: center">
-                  <p style="font-weight: bold; text-transform:uppercase">HRIS Approver :</p>
-                  <img src="../assets/gray.jpeg" alt="" style="width: 80px; border-radius: 50%;" />
-                  <p style="font-weight: bold; text-transform:uppercase; margin:0; font-size:14px!important;margin-top:10px">Christian Marvin T. Orsua</p>
-                  <p style="font-weight: bold; text-transform:uppercase;">IT Software Manager</p>
+                  <p style="font-weight: bold; text-transform:uppercase">HR-FORM Approver :</p>
+                  <div class="" style="display: flex; justify-content:center">
+
+                     <div class="approver_detail">
+                        <i class="bi bi-person-badge" style="font-size:  45px;"></i>
+                        <p style="font-weight: bold; text-transform:uppercase; margin:0; font-size:14px!important;margin-top:10px; border-bottom: 2px solid black" id="apprv_name"></p>
+                        <p style="font-weight: bold; text-transform:uppercase;" id="apprv_pos">IT Software Manager</p>
+                     </div>
+                  </div>
+
+
                </div>
             </div>
          </div>
@@ -111,7 +118,6 @@
    $('.alert-success').hide()
    $('.alert-danger').hide()
    async function getpostedtransactions() {
-      getEmployeeLeaves()
       const response = await fetch("../controller/userController.php", {
          headers: {
             'Content-type': 'application/x-www-form-urlencoded'
@@ -129,21 +135,9 @@
          $('#ml').html(data['ml'])
       }
 
+      getEmployeeTableLeaves()
+      getApprover()
    }
-
-
-   async function getEmployeeLeaves() {
-      const response = await fetch("", {
-         method: 'POST',
-         headers: {
-            'Content-type': 'application/x-www-form-urlencoded'
-         },
-         body: `empno=${$('#emp_no').html()}&action=getLeaves`
-      })
-      const data = await response.json()
-      console.log(data)
-   }
-
 
    function successMsg() {
       console.log('test success show')
@@ -177,5 +171,53 @@
          }
       });
       return response
+   }
+   async function getEmployeeTableLeaves() {
+      const response = await fetch("../controller/userController.php", {
+         headers: {
+            "Content-type": "application/x-www-form-urlencoded",
+            'Autorization': `Bearer ${$('#token').html()}`
+         },
+         method: 'POST',
+         body: 'action=getLeaves'
+      })
+      const {
+         vl,
+         sl
+      } = await response.json();
+      $('#earnvldays').text(Math.floor(vl.vlearn_days))
+      $('#earnvlhrs').text(Math.floor(vl.vlearn_hrs))
+      $('#filedvldays').text(Math.floor(vl.vlfile_days))
+      $('#filedvlhrs').text(Math.floor(vl.vlfile_hrs))
+      $('#balvldays').text(Math.floor(vl.vlbal_days))
+      $('#balvlhrs').text(Math.floor(vl.vlbal_hrs))
+
+
+      $('#earnsldays').text(Math.floor(sl.slearn_days))
+      $('#earnslhrs').text(Math.floor(sl.slearn_hrs))
+      $('#filedsldays').text(Math.floor(sl.slfile_days))
+      $('#filedslhrs').text(Math.floor(sl.slfile_hrs))
+      $('#balsldays').text(Math.floor(sl.slbal_days))
+      $('#balslhrs').text(Math.floor(sl.slbal_hrs))
+
+   }
+   async function getApprover() {
+      const response = await fetch("../controller/userController.php", {
+         headers: {
+            'Content-type': 'application/x-www-form-urlencoded',
+            'Autorization': `Bearer ${$('#token').html()}`
+         },
+         method: 'POST',
+         body: 'action=getapprover'
+      })
+      const {
+         Approver: {
+            name,
+            position
+         }
+      } = await response.json()
+      $('#apprv_name').text(name)
+      $('#apprv_pos').text(position)
+
    }
 </script>

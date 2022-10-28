@@ -22,6 +22,8 @@
       font-size: 11px;
    }
 </style>
+
+
 <div class="row">
    <div class="col-3">
       <?php require '../components/sidebar.php'; ?>
@@ -35,7 +37,7 @@
                <i class="bi bi-folder-x" id="deleteBtn" style="font-size:15px; cursor:pointer; color:red"></i> Means you can still cancel your request.
                <i class="bi bi-bookmark-check" id="deleteBtn" style="font-size:15px; cursor:pointer; color:green"></i> Means your request has been confirm whether it is is Deleted, For Approval, In-Process, Cancelled. </label>
          </div>
-
+         <hr>
          <table style=" font-size: 11px;font-weight:bold;padding: 1rem 0; " class=" row-border" id="table_id">
             <thead>
                <tr style="background-color: #b82525;color:white; letter-spacing: 1px">
@@ -68,21 +70,34 @@
          <hr>
          <input type="button" value="Okay" data-dismiss="alert" onclick="$('.alert-danger').hide()">
       </div>
-      <!-- SUCCESS -->
-      <div class="alert alert-success alert-dismissible" role="alert" style="position: absolute; top:40px; width:100%">
-         <h4 class="alert-heading">Well done!</h4>
-         <p id="successmsg"></p>
-         <hr>
-         <input type="button" value="Okay" data-dismiss="alert" onclick=" $('.alert-success').hide()">
-      </div>
 
-      <!-- FAILED -->
-      <div class="alert alert-danger alert-dismissible" role="alert" style="position: absolute; top:40px; width:100%">
-         <h4 class="alert-heading">Failed :(</h4>
-         <p id="errormsg"></p>
-         <hr>
-         <input type="button" value="Okay" data-dismiss="alert" onclick="$('.alert-danger').hide()">
+
+      <!-- //modal -->
+      <div class="modal" tabindex="-1" id="myModal">
+         <div class="modal-dialog">
+            <div class="modal-content">
+               <div class="modal-header" style="background-color:#b82525;">
+                  <h5 class="modal-title" style="font-size: 14px;color:white;font-weight:bold;letter-spacing:1px; text-transform:uppercase">Disapprove Request</h5>
+                  <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+               </div>
+               <div class="modal-body">
+                  <p>Hi! We are about to disapprove request no <span id='drrq_no' style="font-weight:bold">123123123</span> of <span id="drrq_name" style="font-weight:bold"></span>, May we know why ? or Any comments about the request ?</p>
+
+                  <div class="form-floating">
+                     <textarea class="form-control disapproveremarks" placeholder="Leave a comment here" id="floatingTextarea" style="font-size: 13px;"></textarea>
+                     <label for="floatingTextarea">Comments</label>
+                  </div>
+               </div>
+               <div class="modal-footer">
+                  <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                  <button type="button" class="btn btn-primary" onclick="submitdisapprove()">Submit</button>
+               </div>
+            </div>
+         </div>
       </div>
+      <!-- //modal -->
+
+
    </div>
 </div>
 <?php require '../layout/footer.php' ?>
@@ -133,8 +148,8 @@
                            <i class="bi bi-hand-thumbs-up" style="font-size:15px; cursor:pointer"></i>
                         </button>
                         
-                        <button  type="button" class="btn btn-danger">   
-                           <i class="bi bi-hand-thumbs-down" style="font-size:15px; cursor:pointer"></i>
+                        <button  type="button" class="btn btn-danger" data-bs-toggle="modal" data-bs-target="#myModal" onclick="handleShowReason('${item['controlno']}', '${name}')">   
+                           <i class="bi bi-hand-thumbs-down" style="font-size:15px; cursor:pointer" ></i>
                         </button>
                         
                      `,
@@ -154,6 +169,33 @@
          },
          method: 'POST',
          body: `controlid=${id}&action=approvereq`
+      })
+      const {
+         error,
+         message
+      } = await response.json();
+      if (error) {
+         $('#errormsg').html(message)
+         $('.alert-danger').show()
+      } else {
+         $('#successmsg').html(message)
+         $('.alert-success').show()
+      }
+   }
+
+   function handleShowReason(controlno, name) {
+      $('#drrq_no').text(controlno)
+      $('#drrq_name').text(name)
+   }
+
+   async function submitdisapprove() {
+      const response = await fetch("../controller/transactionController.php", {
+         method: 'POST',
+         headers: {
+            'Content-type': 'application/x-www-form-urlencoded',
+            'Autorization': `Bearer ${$('#token').html()}`
+         },
+         body: `controlno=${$('#drrq_no').text()}&remarks=${$('textarea.disapproveremarks').val()}&action=deletereq`
       })
       const {
          error,

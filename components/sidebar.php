@@ -77,7 +77,7 @@ $Approver = $_SESSION['Approver'];
                }
                if ($PInfo['is_dept_head'] != false || $PInfo['log_name'] == 'CHRISTIAN MARVIN.ORSUA') {
                   echo ' <a id="listItem" href="approval.php" style="margin: 0;" class="list-group-item list-group-item-action">- Approvals</a>
-                  <a id="listItem" href="leave.php" style="margin: 0; font-size:11px;" class="list-group-item list-group-item-action">- Request History</a>
+                  <a id="listItem" href="history.php" style="margin: 0; font-size:11px;" class="list-group-item list-group-item-action">- Request History</a>
                   ';
                }
                if ($PInfo['log_name'] == "GENIVER.PAULAR" || $PInfo['log_name'] == "JOHANN.GO" || $PInfo['log_name'] == "LUIS PAULO.ASERADO" || $PInfo['log_name'] == 'CHRISTIAN MARVIN.ORSUA') {
@@ -123,6 +123,12 @@ $Approver = $_SESSION['Approver'];
                <p style="margin: 0; font-weight:bold;text-transform:uppercase"><i class="bi bi-award-fill" style="font-size: 15px;"></i>&nbsp;&nbsp;&nbsp;My Credits & Other Informations</p>
             </li>
 
+            <form method="POST" id="logoutform">
+               <li id="listItem" href="attendance.php" class="list-group-item list-group-item-action" aria-current="true" onclick="$('#logoutform').submit()">
+                  <p style="margin: 0; font-weight:bold;text-transform:uppercase"><i class="bi bi-door-open" style="font-size: 15px;"></i>&nbsp;&nbsp;&nbsp;Log out</p>
+                  <input type="text" name="action" value="Logout" style="display:none">
+               </li>
+            </form>
          </ul>
       </div>
    </div>

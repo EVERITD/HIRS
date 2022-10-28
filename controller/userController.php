@@ -405,8 +405,53 @@ if ($_POST['action'] == "getrequests") {
    $response = $data;
 }
 if ($_POST['action'] == "getLeaves") {
-   var_dump($_POST);
-   die();
+   $MAIN_TOKEN = trim(str_replace("Bearer", "", $_SERVER['HTTP_AUTORIZATION']));
+   $employee = extractEmployee($conn, $MAIN_TOKEN);
+   $queryLeave = "execute get_vl '" . $employee['emp_no'] . "','VL'";
+   $stmtLeave = sqlsrv_query($conn, $queryLeave);
+
+   if (sqlsrv_fetch($stmtLeave)) {
+      $clsLeave = new Standard('');
+      $response['vl'] = $clsLeave->bindMetaData($stmtLeave);
+   }
+
+   $queryLeave = "execute get_sl '" . $employee['emp_no'] . "','SL'";
+   $stmtLeave = sqlsrv_query($conn, $queryLeave);
+   if (sqlsrv_fetch($stmtLeave)) {
+      $clsLeave = new Standard('');
+      $response['sl'] = $clsLeave->bindMetaData($stmtLeave);
+   }
+}
+if ($_POST['action'] == 'getapprover') {
+   $MAIN_TOKEN = trim(str_replace("Bearer", "", $_SERVER['HTTP_AUTORIZATION']));
+   $employee = extractEmployee($conn, $MAIN_TOKEN);
+   $queryHeadMan = "select approver_name as name,approver_position as position from ref_hris_approver where emp_no = '" . $employee['emp_no'] . "' and is_approver = 1 ";
+
+   $stmt = sqlsrv_query($conn, $queryHeadMan);
+   if (sqlsrv_fetch($stmt)) {
+      $clsApprover = new Standard('');
+      $response['Approver'] = $clsApprover->bindMetaData($stmt);
+   }
+}
+
+function extractEmployee($conn, $MAIN_TOKEN)
+{
+   $Employee = new Standard("");
+   $_query1 = "select rtrim(ltrim(a.emp_no)) as emp_no,g.br_name,c.rank_code, c.post_name as position, rtrim(ltrim(d.deptname)) as department,ltrim(rtrim(a.firstname))+'.'+ltrim(rtrim(a.lastname)) as log_name, ltrim(rtrim(a.lastname))+', '+ltrim(rtrim(a.firstname))+' '+substring(ltrim(rtrim(middlename)), 1, 1)+'.' as name, ltrim(rtrim(g.id_prefix)) as id_prefix from ref_emp_mast a left join ref_emp_trans b on a.emp_no = b.emp_no left join ref_position c on b.br_code = c.br_code and b.div_code = c.div_code and b.rank_code = c.rank_code and b.dept_code = c.dept_code and b.post_code = c.post_code left join ref_department d on d.br_code = b.br_code and d.div_code = b.div_code and d.dept_code = b.dept_code left join hris_mainLogIn e on b.emp_no in (e.user_name,e.temp_pass) left join ref_emp_stat f on f.emp_stat = b.emp_stat and f.br_prefix = b.br_code left join ref_branch g on d.br_code = g.br_code where ( b.emp_stat in ('regu','prob','cont','ojt') and b.date_end is null or date_end > getdate() or date_end = '1900-01-01 00:00:00.000') and e.log_key = 1 and token_id like rtrim(ltrim('" .  $MAIN_TOKEN . "'))";
+   $stmt1 = sqlsrv_query($conn, $_query1);
+   if (sqlsrv_fetch($stmt1)) {
+      $empData = $Employee->bindMetaData($stmt1);
+      $data['emp_no'] = $empData['emp_no'];
+      $data['emp_name'] = $empData['name'];
+      $data['logname'] = $empData['log_name'];
+      $data['department'] = $empData['department'];
+      $data['br_name'] = $empData['br_name'];
+      $data['position'] = $empData['position'];
+      $data['rank_code'] = $empData['rank_code'];
+      return $data;
+   } else {
+      return false;
+   }
 }
 
 function converttime($rawTime)

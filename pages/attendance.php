@@ -32,7 +32,7 @@
          <div class="">
             <h3 style="font-weight: bold;margin-top: 1rem;"><i class="bi bi-person-video2" style="margin-right:1rem"></i>My Attendance</h3>
 
-            <label for="">Hi! From this page you may view your attedance from your [TIME IN] to [TIME OUT], <br>If there are questions/concerns about your attendance please contact our HR Deparment . </label>
+            <label for="">Hi! From this page you may view your attedance from your [TIME IN] to [TIME OUT]. <br>If there are questions/concerns about your attendance please contact our HR Deparment . </label>
          </div>
 
          <table style="font-size: 11px;font-weight:bold;padding: 1rem 0; " id="table_id" class="row-border">
@@ -134,18 +134,4 @@
       let days = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
       return days[index];
    }
-
-   // async function getAttendance() {
-   //    const response = await fetch("../controller/userController.php", {
-   //       headers: {
-   //          'Content-type': 'application/x-www-form-urlencoded'
-   //       },
-   //       method: 'POST',
-   //       body: `emp_no=${$('#emp_no').html()}&action=getattendance`
-   //    })
-   //    const data = await response.json();
-   //    if (data) {
-   //       console.log(data)
-   //    }
-   // }
 </script>
