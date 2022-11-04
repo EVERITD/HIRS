@@ -203,13 +203,14 @@
          $('#select_ot_appy').empty()
          $('#multi-of-body').empty();
          data.forEach((item, i) => {
-            diffTime(item['otFrom'], item['otTo'])
             let newOption = `<option style="display:flex;justify-content:space-between; border:1px solid; width:100%" value=${item['contNo']}>
                                  <label>${converDate(item['otdate'])} </label>
                                  &emsp;&emsp;
                                  <label>${converT(item['otFrom'])}&emsp; to &emsp;${converT(item['otTo'])}</label>
                                  &emsp;&emsp;
                                  <label>${item['no_of_hrs']}</label>
+                                 &emsp;&emsp;
+                                 <p>${ calcDiff(item['otFrom'], item['otTo'])}</p>
                               </option>`;
             let newTd = `<tr data-control-id="${item['contNo']}">
                            <td style="font-weight:bold!important;padding:0 10px" id="tbl_controlNo">${item['contNo']}</td>
@@ -280,13 +281,54 @@
       $('#total_no_hrs').html(cur_total)
    }
 
-   async function submitReq() {
+   function msToTime(duration) {
+      var milliseconds = Math.floor((duration % 1000) / 100),
+         seconds = Math.floor((duration / 1000) % 60),
+         minutes = Math.floor((duration / (1000 * 60)) % 60),
+         hours = Math.floor((duration / (1000 * 60 * 60)) % 24);
+
+      hours = (hours < 10) ? "0" + hours : hours;
+      minutes = (minutes < 10) ? "0" + minutes : minutes;
+      seconds = (seconds < 10) ? "0" + seconds : seconds;
+
+      return hours + ":" + minutes + ":" + seconds
+   }
+
+   function calcDiff(timefrom, timeto) {
+      let timefrom1 = new Date("01/01/2007 " + timefrom + ":00");
+      let timeto1 = new Date("01/01/2007 " + timeto + ":00");
+      return msToTime(timeto1 - timefrom1)
+   }
+
+   async function submitReq(e) {
       let reqbody = '';
+      let timefrom = $('input[name="data[time_from]"]').val()
+      let timeto = $('input[name="data[time_to]"]').val()
+      let tobefiled = calcDiff(timefrom, timeto)
+      let xcontine = false;
       switch ($("input[name='data[filetype]']:checked").val().toUpperCase()) {
          case "UNDERTIME":
+            let ottime = $('#select_ot_appy').find(":selected").children()[3].innerText
+
+            if (parseFloat(tobefiled.replace(':', '.')) > parseFloat(ottime.replace(':', '.'))) {
+               $('#errormsg').html("Unable to continue. Please check HOUR[FROM] AND HOUR[TO] and compare to selected OT to offset")
+               $('.alert-danger').show()
+               xcontinue = false
+            } else {
+               xcontinue = true
+            }
             reqbody = $('#form_offsetting').serialize() + '&action=OFFSETTING';
             break;
          case "MULTIPLEOFFSET":
+            let totalsethrs = $('#total_no_hrs').html()
+
+            if (parseFloat(tobefiled.replace(':', '.')) > parseFloat(totalsethrs)) {
+               $('#errormsg').html("Unable to continue. Please check HOUR[FROM] AND HOUR[TO]. HOUR FROM AND TO is greater than the total selected overtime")
+               $('.alert-danger').show()
+               xcontinue = false
+            } else {
+               xcontinue = true
+            }
             let tblIds = document.querySelectorAll('#selected_ot_data')
             let data = '';
             let counter = 0;
@@ -306,26 +348,36 @@
          default:
             break;
       }
-      const response = await fetch("../controller/transactionController.php", {
-         method: 'POST',
-         headers: {
-            'Content-type': 'application/x-www-form-urlencoded',
-            'Autorization': `Bearer ${$('#token').html()}`
-         },
-         body: reqbody
-      })
-      const {
-         error,
-         message
-      } = await response.json();
-      if (error) {
-         $('#errormsg').html(message)
-         $('.alert-danger').show()
-      } else {
-         $('#successmsg').html(message)
-         $('.alert-success').show()
+
+      if (xcontine) {
+         e.innerText = "Please wait ... Loading"
+         const response = await fetch("../controller/transactionController.php", {
+            method: 'POST',
+            headers: {
+               'Content-type': 'application/x-www-form-urlencoded',
+               'Autorization': `Bearer ${$('#token').html()}`
+            },
+            body: reqbody + `&emp_no=${$('#select_branchemp').val() ? $('#select_branchemp').val() : '' }`
+         })
+         const {
+            error,
+            message
+         } = await response.json();
+         if (error) {
+            $('#errormsg').html(message)
+            $('.alert-danger').show()
+            e.innerText = "Submit"
+            e.removeAttribute('disabled')
+         } else {
+            $('#successmsg').html(message)
+            $('.alert-success').show()
+            e.innerText = "Submit"
+            e.removeAttribute('disabled')
+            $('#multi-selected-of-body').empty()
+         }
+         getOTControl();
       }
-      getOTControl();
+
    }
 
    async function validateSet() {
@@ -352,5 +404,6 @@
    function diffTime(from, to) {
       let fromTime = parseFloat(from.replace(":", '.'))
       let toTime = parseFloat(to.replace(":", '.'))
+      console.log(toTime, fromTime)
    }
 </script>

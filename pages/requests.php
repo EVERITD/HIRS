@@ -185,9 +185,9 @@
          $('#errormsg').html(message)
          $('.alert-danger').show()
       } else {
+         $('#table_id').DataTable().ajax.reload();
          $('#successmsg').html(message)
          $('.alert-success').show()
-         $('#table_id').DataTable().ajax.reload();
       }
 
    }

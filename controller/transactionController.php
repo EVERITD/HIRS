@@ -5,9 +5,330 @@ require('../backend/dbconn.php');
 include "../mailer_class2.php";
 $response = [];
 
+
 if ($_SERVER['HTTP_AUTORIZATION']) {
    $MAIN_TOKEN = trim(str_replace("Bearer", "", $_SERVER['HTTP_AUTORIZATION']));
    if ($MAIN_TOKEN) {
+      if ($_POST['action'] == "LEAVE") {
+         $data = $_POST['data'];
+         $dates = explode('-', $data['dates']);
+         $params['leave_type'] = $data['leave_type'];
+         $params['dtefrom'] = $dates[0];
+         $params['dteto'] = trim($dates[1]);
+         $params['hours'] = $data['hours'];
+         $params['reason'] = $data['reason'];
+
+         $lNatureCode    = isset($params['leave_type']) ? $params['leave_type'] : null;
+         $lDate          = isset($params['dtefrom']) ?  $params['dtefrom'] : null;
+         $lDate2       = isset($params['dteto']) ?  $params['dteto']  : null;
+         $lReason       = isset($params['reason']) ?  $params['reason'] : null;
+         $llchours          = isset($params['hours']) ? $params['hours'] : null;
+
+
+         $employee = extractEmployee($conn, $MAIN_TOKEN);
+         $eempno = $_POST['emp_no'] ? $_POST['emp_no']  : $employee['emp_no'];
+
+         $ins_approver = "execute approver_auto_insert '" . trim($employee['emp_no']) . "'," . trim($eempno) . "";
+         $rs_qry = sqlsrv_query($conn, $ins_approver);
+
+
+         $esi_emp = array(
+            '9900139', '9900699', '9900434', '9900631', '9900846', '9900962', '9901004', '9900886', '9900515', '9900424', '9900328', '9900427',
+            '9900780', '9900926', '9900127', '9901096', '9901132', '9900358', '9900190', '9900912', '9900804', '9900944', '9900301', '9900836',
+            '9901112', '9900959', '9900776', '9900890', '9901028', '9901281'
+         );
+
+
+         if (in_array($eempno, $esi_emp)) {
+            $getdate = 'convert(char(8),getdate() - 210,112) ';
+         } else {
+            $getdate = 'convert(char(8),getdate(),112) ';
+         }
+
+
+         $queryValidation = "execute validate_leave '$eempno'";
+         $resultforValidation = sqlsrv_query($conn, $queryValidation);
+         $DataforleaveValidation = sqlsrv_fetch_object($resultforValidation);
+
+         // while ($DataforleaveValidation = sqlsrv_fetch_object($resultforValidation)) {
+         $slRemain = is_null($DataforleaveValidation->SL_remain) ? 0 : $DataforleaveValidation->SL_remain;
+         $vlRemain = is_null($DataforleaveValidation->VL_remain) ? 0 : $DataforleaveValidation->VL_remain;
+         $hrsADay = $DataforleaveValidation->work_hrs_aday;
+
+         // }
+
+
+         if ($vlRemain && $vlRemain <= 0) {
+            $response['error'] = true;
+            $response['message'] = "No VL Balance encoded at this moment";
+         }
+
+         if ($slRemain && $slRemain <= 0) {
+            $response['error'] = true;
+            $response['message'] = "No SL Balance encoded at this moment";
+         }
+
+
+         $queryLName = "select leave_name from ref_leave_code where leave_code like '" . $lNatureCode . "'";
+         $resultLName = sqlsrv_query($conn, $queryLName);
+         while ($lDatalName = sqlsrv_fetch_object($resultLName)) {
+            $leave_name = $lDatalName->leave_name;
+         }
+
+         if ((trim($leave_name) === 'Vacation Leave (half-day)' or trim($leave_name) === 'Sick Leave (half-day)') and trim($lDate) !== trim($lDate2)) {
+            $response['error'] = true;
+            $response['message'] = "Invalid leave selection!</br></br> " . trim($leave_name) . ",  is a single date transaction...";
+            echo json_encode($response);
+            die();
+         }
+
+         $xcontinue = false;
+         $queryLOAT  = "select *,case when date_from = date_to then ltrim(rtrim(convert(char(10),date_from,101))) else ltrim(rtrim(convert(char(10),date_from,101)))+' to '+ltrim(rtrim(convert(char(10),date_to,101))) end as daterec ";
+         $queryLOAT .= "from emp_request_master where emp_no = '" . $eempno . "' and leavestatusid not in(6,5) and (convert(char(8),(CONVERT(DATETIME,'" . $lDate . "',111)),112) between convert(char(8),date_from,112) and convert(char(8),date_to,112) or ";
+         $queryLOAT .= "convert(char(8),(CONVERT(DATETIME,'" . $lDate2 . "',111)),112) between convert(char(8),date_from,112) and convert(char(8),date_to,112)) and ltrim(rtrim(lrs_type)) not in ('DOF','CHA') ";
+
+         $resultLOAT = sqlsrv_query($conn, $queryLOAT);
+         if (!sqlsrv_fetch($resultLOAT)) {
+            $queryLT  = "select *,case when date_Ffrom = date_Fto then ltrim(rtrim(convert(char(10),date_Ffrom,101))) else ltrim(rtrim(convert(char(10),date_Ffrom,101)))+' to '+ltrim(rtrim(convert(char(10),date_Fto,101))) end as daterec ";
+            $queryLT .= "from leave_trans where emp_no like '" . $eempno . "' and leavestatusid not in(6,5) and ";
+            $queryLT .= "(convert(char(8),(CONVERT(DATETIME,'" . $lDate . "',111)),112) between convert(char(8),date_Ffrom,112) and convert(char(8),date_Fto,112) or ";
+            $queryLT .= "convert(char(8),(CONVERT(DATETIME,'" . $lDate2 . "',111)),112) between convert(char(8),date_Ffrom,112) and convert(char(8),date_Fto,112)) ";
+
+            $resultLT = sqlsrv_query($conn, $queryLT);
+            if (!sqlsrv_fetch($resultLT)) {
+               $xcontinue = true;
+            } else {
+               $response['error'] = true;
+               $response['message'] = 'Selected dates already filed. Please try again.';
+            }
+         } else {
+            $response['error'] = true;
+            $response['message'] = 'Selected dates already filed. Please try again.';
+         }
+
+         if ($xcontinue) {
+            $arrayLongLeav = array('NL', 'PL');
+            if (in_array(trim($lNatureCode), $arrayLongLeav)) {
+               $daysLeft = 0;
+               $fromDate = date('Y-m-d', strtotime($lDate));
+               $toDate = date('Y-m-d', strtotime($lDate2));
+               $daysLeft = abs(strtotime($toDate) - strtotime($fromDate));
+               $dayCount = $daysLeft / (60 * 60 * 24);
+            } else {
+               $dayCount = date('Ymd', strtotime($lDate2)) - date('Ymd', strtotime($lDate)) + 1;
+            }
+
+            $hrCount = $dayCount * $llchours;
+            $arrayLeavCode = array('HV', 'HS', 'SL', 'VL');
+
+            if (in_array(trim($lNatureCode), $arrayLeavCode)) {
+               if (trim($llchours) == 'Select hours') {
+                  if (in_array(trim($lNatureCode), $arrayLeavCode)) {
+                     $resulta['status'] = 'error';
+                     $resulta['message'] = 'Please select hours!!';
+                     echo json_encode($resulta);
+                     die();
+                  }
+               }
+
+               $arrayLeavCodeHD = array('HV', 'HS');
+               $arrayLeavHoursHD = array('4.00', '4.50', '5.00', '5.50');
+
+               $arrayLeavCodeWD = array('SL', 'VL');
+               $arrayLeavHoursWD = array('9.00', '9.50', '8.00', '6.00');
+
+
+               if (in_array(trim($lNatureCode), $arrayLeavCodeWD)) {
+                  if (in_array(trim($llchours), $arrayLeavHoursHD)) {
+                     $remaining = ($lNatureCode == 'SL') ? $slRemain : $vlRemain;
+                     $balHrs = $remaining - $llchours;
+                     if ($balHrs < 0) {
+                        $response['error'] = true;
+                        $response['message'] = "The remaining leave you have is $remaining hrs. !!";
+                        echo json_encode($response);
+                        die();
+                     } else {
+                        $response['error'] = true;
+                        $response['message'] = 'Please select availed leave hours between 9 to 9.5 only!!';
+                        echo json_encode($response);
+                        die();
+                     }
+                  } else {
+
+                     if ($lNatureCode == 'VL') {
+                        $balHrs = $vlRemain - $hrCount;
+                        //$hrCount = ($balHrs >= 0) ? $hrCount : $vlRemain ;
+                        if ($balHrs < 0) {
+                           $hrCount = $vlRemain;
+                           if ($vlRemain < 6) {
+                              $dayCount = 0.50;
+                              $lNatureCode = 'HV';
+                           }
+                        }
+                     }
+
+                     if ($lNatureCode == 'SL') {
+                        $balHrs = $slRemain - $hrCount;
+                        //$hrCount = ($balHrs >= 0) ? $hrCount : $slRemain ;
+                        if ($balHrs < 0) {
+                           $hrCount = $vlRemain;
+                           if ($vlRemain < 6) {
+                              $dayCount = 0.50;
+                              $lNatureCode = 'HS';
+                           }
+                        }
+                     }
+
+
+                     $insertReq  = "insert into leave_trans (controlno,emp_no,leave_code,date_Ffrom,date_Fto,reason,no_of_days,no_of_hrs,encoded_by,encoded_date, ";
+                     $insertReq .= "leavestatusid,isapproved,approved_by,approved_date,audit_user,audit_date,ispis) ";
+                     $insertReq .= "select (select 'LV'+right('00000000'+(select ltrim(rtrim(str(controlno+1))) from ref_controlno where module_code = 'LV'),8)) ";
+                     $insertReq .= ",'" . $eempno . "','" . $lNatureCode . "','" . $lDate . "','" . $lDate2 . "', ";
+                     $insertReq .= "'" . str_replace("'", "`", $lReason) . "','" . $dayCount . "','" . $hrCount . "','" . strtolower($employee['logname']) . "',getdate(),'1','0','---', ";
+                     $insertReq .= "getdate()+1,'---',getdate(),'0'  from ref_controlno where module_code = 'LV' ";
+
+
+                     //echo $insertReq;
+                     //echo '1';
+                     //die();
+                  }
+               }
+
+               if (in_array(trim($lNatureCode), $arrayLeavCodeHD)) {
+                  if (in_array(trim($llchours), $arrayLeavHoursWD)) {
+                     $remaining = ($lNatureCode == 'HS') ? $slRemain : $vlRemain;
+                     $balHrs = $remaining - $llchours;
+                     if ($balHrs < 0) {
+                        $resulta['error'] = true;
+                        $resulta['message'] = "The remaining leave you have is $remaining hrs. !!";
+                        echo json_encode($resulta);
+                        die();
+                     } else {
+                        $resulta['error'] = true;
+                        $resulta['message'] = 'Please select between 4 to 5.5 selections only!!';
+                        echo json_encode($resulta);
+                        die();
+                     }
+                  } else {
+
+                     if ($lNatureCode == 'HV') {
+                        $balHrs = $vlRemain - $llchours;
+                        //$llchours = ($balHrs >= 0) ? $llchours : $vlRemain ;
+                        if ($balHrs < 0) {
+                           $llchours = $vlRemain;
+                           if ($vlRemain < 6) {
+                              $dayCount = 0.50;
+                           }
+                        }
+                     }
+
+                     if ($lNatureCode == 'HS') {
+                        $balHrs = $slRemain - $llchours;
+                        //$llchours = ($balHrs >= 0) ? $llchours : $slRemain ;
+                        if ($balHrs < 0) {
+                           $llchours = $slRemain;
+                           if ($vlRemain < 6) {
+                              $dayCount = 0.50;
+                           }
+                        }
+                     }
+
+
+                     $insertReq  = "insert into leave_trans (controlno,emp_no,leave_code,date_Ffrom,date_Fto,reason,no_of_days,no_of_hrs,encoded_by,encoded_date, ";
+                     $insertReq .= "leavestatusid,isapproved,approved_by,approved_date,audit_user,audit_date,ispis) ";
+                     $insertReq .= "select (select 'LV'+right('00000000'+(select ltrim(rtrim(str(controlno+1))) from ref_controlno where module_code = 'LV'),8)) ";
+                     $insertReq .= ",'" . $eempno . "','" . $lNatureCode . "','" . $lDate . "','" . $lDate2 . "', ";
+                     $insertReq .= "'" . str_replace("'", "`", $lReason) . "','0.5'," . $llchours . ",'" . strtolower($numRowsUserTok->log_name) . "',getdate(),'1','0','---', ";
+                     $insertReq .= "getdate()+1,'---',getdate(),'0'  from ref_controlno where module_code = 'LV' ";
+                     /*	echo '2';*/
+                     //echo $insertReq;
+                     //echo '2';
+                     //die();
+
+                  }
+               }
+            } else {
+               $hrCount  = $dayCount * $hrsADay;
+
+               if ($lNatureCode == 'VL') {
+                  $balHrs = $vlRemain - $hrCount;
+                  //$hrCount = ($balHrs >= 0) ? $hrCount : $vlRemain ;
+                  if ($balHrs < 0) {
+                     $hrCount = $vlRemain;
+                     if ($vlRemain < 6) {
+                        $dayCount = 0.50;
+                        $lNatureCode = 'HV';
+                     }
+                  }
+               }
+               if ($lNatureCode == 'SL') {
+                  $balHrs = $slRemain - $hrCount;
+                  //$hrCount = ($balHrs >= 0) ? $hrCount : $slRemain ;
+                  if ($balHrs < 0) {
+                     $hrCount = $vlRemain;
+                     if ($vlRemain < 6) {
+                        $dayCount = 0.50;
+                        $lNatureCode = 'HS';
+                     }
+                  }
+               }
+
+               $insertReq  = "insert into leave_trans (controlno,emp_no,leave_code,date_Ffrom,date_Fto,reason,no_of_days,no_of_hrs,encoded_by,encoded_date, ";
+               $insertReq .= "leavestatusid,isapproved,approved_by,approved_date,audit_user,audit_date,ispis) ";
+               $insertReq .= "select (select 'LV'+right('00000000'+(select ltrim(rtrim(str(controlno+1))) from ref_controlno where module_code = 'LV'),8)) ";
+               $insertReq .= ",'" . $eempno . "','" . $lNatureCode . "','" . $lDate . "','" . $lDate2 . "', ";
+               $insertReq .= "'" . str_replace("'", "`", $lReason) . "','" . $dayCount . "','" . $hrCount . "','" . strtolower($employee['logname']) . "',getdate(),'1','0','---', ";
+               $insertReq .= "getdate()+1,'---',getdate(),'0'  from ref_controlno where module_code = 'LV' ";
+            }
+
+
+            $clsControlNo = new Standard("");
+            $stat_control_no = $clsControlNo->nextControlNumber('LV');
+            $UpdateCN .= "select 'LV'+right('00000000'+(select ltrim(rtrim(str(controlno))) from ref_controlno where module_code = 'LV'),8) as controlno ";
+            $rst = sqlsrv_query($conn, $UpdateCN);
+            if (sqlsrv_fetch($rst)) {
+               $clsControlNo1 = new Standard('');
+               $ctrlList = $clsControlNo1->bindMetaData($rst)['controlno'];
+            }
+
+            $resultInsReq = sqlsrv_query($conn, $insertReq);
+            if (!$resultInsReq) {
+               $response['error'] = true;
+               $response['message'] = 'Submission failed!</br></br>Database problem!';
+               echo json_encode($response);
+               die();
+            } else {
+               // die();
+               $balHrs = $remaining - $llchours;
+               if ($balHrs < 0) {
+                  $remaining = ($lNatureCode == 'HS' or $lNatureCode == 'SL') ? $slRemain : $vlRemain;
+                  $resulta['error'] = false;
+                  $resulta['message'] = "Request successfully submitted!</br></br> you had use your $remaining hrs remaining leaves!  ";
+               } else {
+                  $resulta['error'] = false;
+                  $resulta['message'] = 'Request successfully submitted! ';
+               }
+               $UpdateCN = "update ref_controlno set controlno = controlno+1 where module_code = 'LV'";
+               $UpdateCN .= ";select 'LV'+right('00000000'+(select ltrim(rtrim(str(controlno))) from ref_controlno where module_code = 'LV'),8) as controlno ";
+
+               $rst = sqlsrv_query($conn, $UpdateCN);
+               while ($rstRow = sqlsrv_fetch_object($rst)) {
+                  $ctrlList = $rstRow;
+               }
+
+               $leave_type = trim($leave_name);
+               $date_filed = date('Y-m-d');
+               $control_no  = $ctrlList;
+               $lceff_date = ($lDate === $lDate2) ? $lDate : $lDate . ' &mdash; ' . $lDate2;
+
+               $mailer = new Mailer();
+               $mailer_from = $mailer->get_sender($eempno);
+               $mailer_to = $mailer->get_recipient($eempno);
+               $test_mail_to[0]['email'] = "marvin.orsua@ever.ph";
+               $mailer_send = $mailer->mailformat_request($eempno, $employee['emp_name'], $leave_type, $date_filed, $control_no, $employee['department'], $employee['br_name'], $lceff_date, $lReason, $mailer_from,  $test_mail_to);
+            }
+         }
+      }
       if ($_POST['action'] == "LeaveOfAbsence") {
          $datefrom = $_POST['dtefrm'];
          $dateto = $_POST['dteto'];
@@ -172,7 +493,7 @@ if ($_SERVER['HTTP_AUTORIZATION']) {
             $continue = true;
          }
 
-         if ($_POST['emp_no']) {
+         if ($_POST['emp_no'] != '') {
             $emp_no = $_POST['emp_no'];
          }
          if ($continue) {
@@ -890,7 +1211,7 @@ if ($_SERVER['HTTP_AUTORIZATION']) {
                $queryLName = "select lrs_desc from ref_lrs_type where lrs_type like 'CHA'";
                $stmt_lname = sqlsrv_query($conn, $queryLName);
                if (sqlsrv_fetch($stmt_lname)) {
-                  $leave_name = $lrs_cls->bindMetaData($stmt_lname);
+                  $leave_name = $lrs_cls->bindMetaData($stmt_lname)['lrs_desc'];
                }
                $GCN = new Standard("");
                $controlno = $GCN->generateControlNumber('CW');
@@ -929,55 +1250,66 @@ if ($_SERVER['HTTP_AUTORIZATION']) {
                   $insert_coffee_out = "insert into emp_request_detail (controlno,emp_no,sched_type,change_time,encoded_by,encoded_date) select'" .  $controlno  . "','" .  $employee['emp_no'] . "','CBO','" . $params['coffee_out']  . "','" . strtolower($employee['logname']) . "',getdate() ";
 
                   $stmt_timein = sqlsrv_query($conn, $insert_time_in);
-                  var_dump($insert_time_in);
-                  die();
                   $stmt_timeout = sqlsrv_query($conn, $insert_time_out);
                   $stmt_lunchin = sqlsrv_query($conn, $insert_lunch_in);
                   $stmt_lunchout = sqlsrv_query($conn, $insert_lunch_out);
                   $stmt_coffeeIn = sqlsrv_query($conn, $insert_coffee_in);
                   $stmt_coffeeOut = sqlsrv_query($conn, $insert_coffee_out);
 
-                  if (!$stmt_timein) {
-                     $response['error'] = true;
-                     $response['status'] = 503;
-                     $response['message'] = "Time in data was not able to save to database!";
-                     echo json_encode($response);
-                     die();
+
+                  if ($params['timein'] != '' || $params['timein'] != 0) {
+                     if (!$stmt_timein) {
+                        $response['error'] = true;
+                        $response['status'] = 503;
+                        $response['message'] = "Time in data was not able to save to database!";
+                        echo json_encode($response);
+                        die();
+                     }
                   }
-                  if (!$stmt_timeout) {
-                     $response['error'] = true;
-                     $response['status'] = 503;
-                     $response['message'] = "Time out data was not able to save to database!";
-                     echo json_encode($response);
-                     die();
+                  if ($params['timeout'] != '' || $params['timeout'] != 0) {
+                     if (!$stmt_timeout) {
+                        $response['error'] = true;
+                        $response['status'] = 503;
+                        $response['message'] = "Time out data was not able to save to database!";
+                        echo json_encode($response);
+                        die();
+                     }
                   }
-                  if (!$stmt_lunchin) {
-                     $response['error'] = true;
-                     $response['status'] = 503;
-                     $response['message'] = "Lunch break In data was not able to save to database!";
-                     echo json_encode($response);
-                     die();
+                  if ($params['lunchbreak_in'] != '' || $params['lunchbreak_in'] != 0) {
+                     if (!$stmt_lunchin) {
+                        $response['error'] = true;
+                        $response['status'] = 503;
+                        $response['message'] = "Lunch break In data was not able to save to database!";
+                        echo json_encode($response);
+                        die();
+                     }
                   }
-                  if (!$stmt_lunchout) {
-                     $response['error'] = true;
-                     $response['status'] = 503;
-                     $response['message'] = "Lunch break Out data was not able to save to database!";
-                     echo json_encode($response);
-                     die();
+                  if ($params['lunchbreak_out'] != '' || $params['lunchbreak_out'] != 0) {
+                     if (!$stmt_lunchout) {
+                        $response['error'] = true;
+                        $response['status'] = 503;
+                        $response['message'] = "Lunch break Out data was not able to save to database!";
+                        echo json_encode($response);
+                        die();
+                     }
                   }
-                  if (!$stmt_coffeeIn) {
-                     $response['error'] = true;
-                     $response['status'] = 503;
-                     $response['message'] = "Coffee break In data was not able to save to database!";
-                     echo json_encode($response);
-                     die();
+                  if ($params['coffee_in'] != '' || $params['coffee_in'] != 0) {
+                     if (!$stmt_coffeeIn) {
+                        $response['error'] = true;
+                        $response['status'] = 503;
+                        $response['message'] = "Coffee break In data was not able to save to database!";
+                        echo json_encode($response);
+                        die();
+                     }
                   }
-                  if (!$stmt_coffeeOut) {
-                     $response['error'] = true;
-                     $response['status'] = 503;
-                     $response['message'] = "Coffee break Out data was not able to save to database!";
-                     echo json_encode($response);
-                     die();
+                  if ($params['coffee_out'] != '' || $params['coffee_out'] != 0) {
+                     if (!$stmt_coffeeOut) {
+                        $response['error'] = true;
+                        $response['status'] = 503;
+                        $response['message'] = "Coffee break Out data was not able to save to database!";
+                        echo json_encode($response);
+                        die();
+                     }
                   }
 
                   $leave_type = $leave_name;
@@ -985,7 +1317,7 @@ if ($_SERVER['HTTP_AUTORIZATION']) {
                   $mailer = new Mailer();
                   $mailer_from = $mailer->get_sender($employee['emp_no']);
                   $mailer_to = $mailer->get_recipient($employee['emp_no']);
-                  $mailer_send = $mailer->mailformat_request($employee['emp_no'], $employee['name'], $leave_type, $date_filed, $controlno, $employee['department'], $employee['br_name'], $params['effective_date'], $params['remarks'], $mailer_from, $mailer_to);
+                  $mailer_send = $mailer->mailformat_request($employee['emp_no'], $employee['emp_name'], $leave_type, $date_filed, $controlno, $employee['department'], $employee['br_name'], $params['effective_date'], $params['remarks'], $mailer_from, $mailer_to);
 
                   $response['error'] = false;
                   $response['status'] = 200;
@@ -1002,7 +1334,7 @@ if ($_SERVER['HTTP_AUTORIZATION']) {
                $queryLName = "select lrs_desc from ref_lrs_type where lrs_type like 'LUB'";
                $stmt_lname = sqlsrv_query($conn, $queryLName);
                if (sqlsrv_fetch($stmt_lname)) {
-                  $leave_name = $lrs_cls->bindMetaData($stmt_lname);
+                  $leave_name = $lrs_cls->bindMetaData($stmt_lname)['lrs_desc'];
                }
 
                $GCN = new Standard("");
@@ -1040,27 +1372,12 @@ if ($_SERVER['HTTP_AUTORIZATION']) {
 
                   $insert_coffee_out = "insert into emp_request_detail (controlno,emp_no,sched_type,change_time,encoded_by,encoded_date) select'" .  $controlno  . "','" .  $employee['emp_no'] . "','CBO','" . $params['coffee_out']  . "','" . strtolower($employee['logname']) . "',getdate() ";
 
-                  $stmt_timein = sqlsrv_query($conn, $insert_time_in);
-                  $stmt_timeout = sqlsrv_query($conn, $insert_time_out);
+
                   $stmt_lunchin = sqlsrv_query($conn, $insert_lunch_in);
                   $stmt_lunchout = sqlsrv_query($conn, $insert_lunch_out);
-                  $stmt_coffeeIn = sqlsrv_query($conn, $insert_coffee_in);
-                  $stmt_coffeeOut = sqlsrv_query($conn, $insert_coffee_out);
 
-                  if (!$stmt_timein) {
-                     $response['error'] = true;
-                     $response['status'] = 503;
-                     $response['message'] = "Time in data was not able to save to database!";
-                     echo json_encode($response);
-                     die();
-                  }
-                  if (!$stmt_timeout) {
-                     $response['error'] = true;
-                     $response['status'] = 503;
-                     $response['message'] = "Time out data was not able to save to database!";
-                     echo json_encode($response);
-                     die();
-                  }
+
+
                   if (!$stmt_lunchin) {
                      $response['error'] = true;
                      $response['status'] = 503;
@@ -1075,27 +1392,14 @@ if ($_SERVER['HTTP_AUTORIZATION']) {
                      echo json_encode($response);
                      die();
                   }
-                  if (!$stmt_coffeeIn) {
-                     $response['error'] = true;
-                     $response['status'] = 503;
-                     $response['message'] = "Coffee break In data was not able to save to database!";
-                     echo json_encode($response);
-                     die();
-                  }
-                  if (!$stmt_coffeeOut) {
-                     $response['error'] = true;
-                     $response['status'] = 503;
-                     $response['message'] = "Coffee break Out data was not able to save to database!";
-                     echo json_encode($response);
-                     die();
-                  }
+
 
                   $leave_type = $leave_name;
                   $date_filed = date('Y-m-d');
                   $mailer = new Mailer();
                   $mailer_from = $mailer->get_sender($employee['emp_no']);
                   $mailer_to = $mailer->get_recipient($employee['emp_no']);
-                  $mailer_send = $mailer->mailformat_request($employee['emp_no'], $employee['name'], $leave_type, $date_filed, $controlno, $employee['department'], $employee['br_name'], $params['effective_date'], $params['remarks'], $mailer_from, $mailer_to);
+                  $mailer_send = $mailer->mailformat_request($employee['emp_no'], $employee['emp_name'], $leave_type, $date_filed, $controlno, $employee['department'], $employee['br_name'], $params['effective_date'], $params['remarks'], $mailer_from, $mailer_to);
 
                   $response['error'] = false;
                   $response['status'] = 200;
@@ -1112,7 +1416,7 @@ if ($_SERVER['HTTP_AUTORIZATION']) {
                $queryLName = "select lrs_desc from ref_lrs_type where lrs_type like 'COB'";
                $stmt_lname = sqlsrv_query($conn, $queryLName);
                if (sqlsrv_fetch($stmt_lname)) {
-                  $leave_name = $lrs_cls->bindMetaData($stmt_lname);
+                  $leave_name = $lrs_cls->bindMetaData($stmt_lname)['lrs_desc'];
                }
 
                $GCN = new Standard("");
@@ -1149,41 +1453,10 @@ if ($_SERVER['HTTP_AUTORIZATION']) {
 
                   $insert_coffee_out = "insert into emp_request_detail (controlno,emp_no,sched_type,change_time,encoded_by,encoded_date) select'" .  $controlno  . "','" .  $employee['emp_no'] . "','CBO','" . $params['coffee_out']  . "','" . strtolower($employee['logname']) . "',getdate() ";
 
-                  $stmt_timein = sqlsrv_query($conn, $insert_time_in);
-                  $stmt_timeout = sqlsrv_query($conn, $insert_time_out);
-                  $stmt_lunchin = sqlsrv_query($conn, $insert_lunch_in);
-                  $stmt_lunchout = sqlsrv_query($conn, $insert_lunch_out);
                   $stmt_coffeeIn = sqlsrv_query($conn, $insert_coffee_in);
                   $stmt_coffeeOut = sqlsrv_query($conn, $insert_coffee_out);
 
-                  if (!$stmt_timein) {
-                     $response['error'] = true;
-                     $response['status'] = 503;
-                     $response['message'] = "Time in data was not able to save to database!";
-                     echo json_encode($response);
-                     die();
-                  }
-                  if (!$stmt_timeout) {
-                     $response['error'] = true;
-                     $response['status'] = 503;
-                     $response['message'] = "Time out data was not able to save to database!";
-                     echo json_encode($response);
-                     die();
-                  }
-                  if (!$stmt_lunchin) {
-                     $response['error'] = true;
-                     $response['status'] = 503;
-                     $response['message'] = "Lunch break In data was not able to save to database!";
-                     echo json_encode($response);
-                     die();
-                  }
-                  if (!$stmt_lunchout) {
-                     $response['error'] = true;
-                     $response['status'] = 503;
-                     $response['message'] = "Lunch break Out data was not able to save to database!";
-                     echo json_encode($response);
-                     die();
-                  }
+
                   if (!$stmt_coffeeIn) {
                      $response['error'] = true;
                      $response['status'] = 503;
@@ -1204,7 +1477,7 @@ if ($_SERVER['HTTP_AUTORIZATION']) {
                   $mailer = new Mailer();
                   $mailer_from = $mailer->get_sender($employee['emp_no']);
                   $mailer_to = $mailer->get_recipient($employee['emp_no']);
-                  $mailer_send = $mailer->mailformat_request($employee['emp_no'], $employee['name'], $leave_type, $date_filed, $controlno, $employee['department'], $employee['br_name'], $params['effective_date'], $params['remarks'], $mailer_from, $mailer_to);
+                  $mailer_send = $mailer->mailformat_request($employee['emp_no'], $employee['emp_name'], $leave_type, $date_filed, $controlno, $employee['department'], $employee['br_name'], $params['effective_date'], $params['remarks'], $mailer_from, $mailer_to);
                   $response['error'] = false;
                   $response['status'] = 200;
                   $response['message'] = "Request successfuly submitted";
@@ -1246,7 +1519,7 @@ if ($_SERVER['HTTP_AUTORIZATION']) {
                   $query_insert = "insert into emp_request_master (controlno,emp_no,lrs_type,date_from,date_to,leavestatusid,reason,encoded_by, encoded_date,isapproved,approved_by,approved_date,audit_user,audit_date,ispis) select '" . $controlno . "','" . $employee['emp_no']  . "','DOF','" . $params['off_dat_off'] . "','" . $params['effective_date'] . "',1,'" .  $params['remarks'] . "','" . $employee['logname'] . "',getdate(),'0','---',NULL,'---',NULL,'0' ";
                   $stmt_insert = sqlsrv_query($conn, $query_insert);
                   if ($stmt_insert) {
-                     $response['error'] = true;
+                     $response['error'] = false;
                      $response['status'] = 200;
                      $response['message'] = "Request successfuly submitted.";
                   } else {
@@ -1418,7 +1691,6 @@ if ($_SERVER['HTTP_AUTORIZATION']) {
       }
       if ($_POST['action'] == "approvals") {
          $employee = extractEmployee($conn, $MAIN_TOKEN);
-         $employee['emp_no'] = "9900628";
          if ($employee) {
             $query = "SELECT e.controlno,
                      Rtrim(Ltrim(a.lastname)) + ', '
@@ -1881,7 +2153,7 @@ if ($_SERVER['HTTP_AUTORIZATION']) {
       if ($_POST['action'] == "approvereq") {
          $employee = extractEmployee($conn, $MAIN_TOKEN);
          //Contribution tables checking before update by first 2 digit control number...
-         $contNoSubHeadOk = substr($_POST['controlno'], 0, 2);
+         $contNoSubHeadOk = substr($_POST['controlid'], 0, 2);
          switch (true) {
             case ($contNoSubHeadOk == 'CS' || $contNoSubHeadOk == 'CW' || $contNoSubHeadOk == 'CD' || $contNoSubHeadOk == 'LB' || $contNoSubHeadOk == 'CB'):
                $toTableHeadOk = 'emp_request_master';
@@ -1933,15 +2205,10 @@ if ($_SERVER['HTTP_AUTORIZATION']) {
                echo json_encode($response);
                die();
          }
-
          //check for requestor employee number
-         $qryRequestor = "select emp_no,leavestatusid from " . $toTableHeadOk . " where controlno = '" . $_POST['controlno'] . "' ";
-
+         $qryRequestor = "select emp_no,leavestatusid from " . $toTableHeadOk . " where controlno = '" . $_POST['controlid'] . "' ";
          $resultRequestorEmpno = sqlsrv_query($conn, $qryRequestor);
-         $employee['emp_no'] = "9900628";
          while ($empnumber = sqlsrv_fetch_object($resultRequestorEmpno)) {
-
-
             //select approver's position (Manager/Supervisor)
             $qryappRank = "select top 1 case when (select count(emp_no) from ref_hris_approver where emp_no = '" . trim($empnumber->emp_no) . "')= 1 then 'Approver' ";
             $qryappRank .= "when a.approver_rank_code > b.approver_rank_code then 'Reviewer' ";
@@ -1952,74 +2219,79 @@ if ($_SERVER['HTTP_AUTORIZATION']) {
 
             $responseppRank = sqlsrv_query($conn, $qryappRank);
             while ($appRank = sqlsrv_fetch_object($responseppRank)) {
+
                if ($appRank->approver_login_as == "Reviewer" and $empnumber->leavestatusid == 1) {
                   //update leave trans on selected Filed user leave under supervisor
-                  $queryUpd = "update " . $toTableHeadOk . " set leavestatusid = '8',approved_by = '" . $employee['logname'] . "',isapproved = '0',approved_date = getdate(),remarks ='Reviewed by: <br/>" . $employee['logname'] . ' - ' . str_replace('\'', '`', $employee['position']) . ' (' . trim($appRank->approver_login_as) . ')<br/>' . "' where controlno = '" . $_POST['controlno'] . "'";
+                  $queryUpd = "update " . $toTableHeadOk . " set leavestatusid = '8',approved_by = '" . $employee['logname'] . "',isapproved = '0',approved_date = getdate(),remarks ='Reviewed by: <br/>" . $employee['logname'] . ' - ' . str_replace('\'', '`', $employee['position']) . ' (' . trim($appRank->approver_login_as) . ')<br/>' . "' where controlno = '" . $_POST['controlid'] . "'";
                   $apprem = "Reviewed by: " . $employee['logname'] . "-" . str_replace('\'', '`', $employee['position']) . " (" . trim($appRank->approver_login_as) . ")";
                } else {
                   //update leave trans on selected Filed user leave under 2x supervisor/direct manager
-                  $queryUpd = "update " . $toTableHeadOk . " set leavestatusid = '2',audit_user = '" . $employee['logname'] . "',isapproved = '1',approved_date = getdate(),remarks =ltrim(rtrim(remarks))+'Approved by: <br/>" . $employee['logname'] . ' - ' . str_replace('\'', '`', $employee['position']) . ' (' . trim($appRank->approver_login_as) . ')' . "' where controlno = '" . $_POST['controlno'] . "'";
+                  $queryUpd = "update " . $toTableHeadOk . " set leavestatusid = '2',audit_user = '" . $employee['logname'] . "',isapproved = '1',approved_date = getdate(),remarks =ltrim(rtrim(remarks))+'Approved by: <br/>" . $employee['logname'] . ' - ' . str_replace('\'', '`', $employee['position']) . ' (' . trim($appRank->approver_login_as) . ')' . "' where controlno = '" . $_POST['controlid'] . "'";
                   $apprem = "Approved by: " . $employee['logname'] . "-" . str_replace('\'', '`', $employee['position']) . " (" . trim($appRank->approver_login_as) . ")";
                }
             }
          }
+
          $resultUpd = sqlsrv_query($conn, $queryUpd);
          if ($resultUpd) {
             $response['error'] = false;
             $response['status'] = '200';
             $response['message'] = 'Request Approved!';
+
+
+            $qryRequeststat = "select b.leavestatus,a.encoded_date as datefiled,ltrim(rtrim(c.lastname))+', '  +ltrim(rtrim(c.firstname))+' '+upper(substring(ltrim(rtrim(c.middlename)),1,1))+'.' as name,
+            h.br_name,i.email" . $Name_j . "
+            from " . $toTableHeadOk . " a
+            left join  ref_leavestat b on a.leavestatusid = b.leavestatusid
+            left join ref_emp_mast c on a.emp_no = c.emp_no
+            left join ref_emp_trans d on d.emp_no = c.emp_no
+            left join ref_position e on d.br_code = e.br_code and d.div_code = e.div_code
+            and d.rank_code = e.rank_code and d.dept_code = e.dept_code and d.post_code = e.post_code
+            left join hris_mainLogIn f on c.emp_no =  f.temp_pass
+            left join ref_department g on g.br_code = d.br_code and g.div_code = d.div_code and g.dept_code = d.dept_code
+            left join ref_branch h on g.br_code = h.br_code
+            left join hris_mainLogin i on i.temp_pass = c.emp_no 
+            " . $l_Join . " where a.controlno = '" . $_POST['controlid'] . "'";
+            $resultRequeststat = sqlsrv_query($conn, $qryRequeststat);
+            while ($reqstat = sqlsrv_fetch_object($resultRequeststat)) {
+               $reStat = $reqstat->leavestatus;
+               $dateFiled = $reqstat->datefiled;
+               $reqname = $reqstat->name;
+               $reqmail = $reqstat->email;
+               $reqbr = $reqstat->br_name;
+               $reqleavename = $reqstat->leave_name;
+               $reqdate = $reqstat->reqdate;
+            }
+
+
+            $leave_type = trim($reqleavename);
+            $date_filed = $dateFiled;
+            $control_no = $_POST['controlid'];
+            $lceff_date = $reqdate;
+            $reqstat   = trim($reStat);
+            $branch     = strtoupper($reqbr);
+            $reason    = '<strong>' . $apprem . '</strong>';
+
+
+            $test_mail_from[0]['email'] = "marvin.orsua@ever.ph";
+            $test_mail_to[0]['email'] = "marvin.orsua@ever.ph";
+            $mailer = new Mailer();
+            $mailer_from = $mailer->get_sender($employee['emp_no']);
+            $table = $mailer->get_table($control_no);
+            $reqmail = $mailer->get_recipient_approve($control_no, $table);
+            // $mailer_send = $mailer->mailformat_approve($reqname, $leave_type, $date_filed, $control_no, $branch, $lceff_date, $reason, $mailer_from, $reqmail, $reqstat);
+            $mailer_send = $mailer->mailformat_approve($reqname, $leave_type, $date_filed, $control_no, $branch, $lceff_date, $reason, $test_mail_from, $test_mail_to, $reqstat);
          } else {
             $response['error'] = true;
             $response['status'] = '503';
             $response['message'] = 'Request was not processed';
          }
-
-
-         $qryRequeststat = "select b.leavestatus,a.encoded_date as datefiled,ltrim(rtrim(c.lastname))+', '  +ltrim(rtrim(c.firstname))+' '+upper(substring(ltrim(rtrim(c.middlename)),1,1))+'.' as name,
-               h.br_name,i.email" . $Name_j . "
-               from " . $toTableHeadOk . " a
-               left join  ref_leavestat b on a.leavestatusid = b.leavestatusid
-               left join ref_emp_mast c on a.emp_no = c.emp_no
-               left join ref_emp_trans d on d.emp_no = c.emp_no
-               left join ref_position e on d.br_code = e.br_code and d.div_code = e.div_code
-               and d.rank_code = e.rank_code and d.dept_code = e.dept_code and d.post_code = e.post_code
-               left join hris_mainLogIn f on c.emp_no =  f.temp_pass
-               left join ref_department g on g.br_code = d.br_code and g.div_code = d.div_code and g.dept_code = d.dept_code
-               left join ref_branch h on g.br_code = h.br_code
-               left join eversql.ehelpdesk.dbo.employee i on i.emp_no = c.emp_no and i.is_active = 1
-               " . $l_Join . "
-               where a.controlno = '" . $_POST['controlno'] . "'";
-         $resultRequeststat = sqlsrv_query($conn, $qryRequeststat);
-         while ($reqstat = sqlsrv_fetch_object($resultRequeststat)) {
-            $reStat = $reqstat->leavestatus;
-            $dateFiled = $reqstat->datefiled;
-            $reqname = $reqstat->name;
-            $reqmail = $reqstat->email;
-            $reqbr = $reqstat->br_name;
-            $reqleavename = $reqstat->leave_name;
-            $reqdate = $reqstat->reqdate;
-         }
-
-
-         $leave_type = trim($reqleavename);
-         $date_filed = $dateFiled;
-         $control_no = $_POST['controlno'];
-         $lceff_date = $reqdate;
-         $reqstat   = trim($reStat);
-         $branch     = strtoupper($reqbr);
-         $reason    = '<strong>' . $apprem . '</strong>';
-
-         $mailer = new Mailer();
-         $mailer_from = $mailer->get_sender($employee['emp_no']);
-         $table = $mailer->get_table($control_no);
-         $reqmail = $mailer->get_recipient_approve($control_no, $table);
-         $mailer_send = $mailer->mailformat_approve($reqname, $leave_type, $date_filed, $control_no, $branch, $lceff_date, $reason, $mailer_from, $reqmail, $reqstat);
       }
       if ($_POST['action'] == "deletereq") {
+
          $lCancelReq = $_POST['remarks'];
          $employee = extractEmployee($conn, $MAIN_TOKEN);
          $contNoSubHeadCancel = substr($_POST['controlno'], 0, 2);
-         $employee['emp_no'] = "9900628";
          switch (true) {
             case ($contNoSubHeadCancel == 'CS' || $contNoSubHeadCancel == 'CW' || $contNoSubHeadCancel ==   'CD' || $contNoSubHeadCancel == 'LB' || $contNoSubHeadCancel == 'CB'):
                $toTableHeadCancel = 'emp_request_master';
@@ -2087,7 +2359,6 @@ if ($_SERVER['HTTP_AUTORIZATION']) {
             }
          }
 
-
          //Set dis approved into upproved if request is not a authorized leave
          if ($contNoSubHeadCancel == 'CS') {
             //update leave trans on selected Filed user leave under head
@@ -2116,7 +2387,7 @@ if ($_SERVER['HTTP_AUTORIZATION']) {
 				left join hris_mainLogIn f on c.emp_no =  f.temp_pass
 				left join ref_department g on g.br_code = d.br_code and g.div_code = d.div_code and g.dept_code = d.dept_code
 				left join ref_branch h on g.br_code = h.br_code
-				left join eversql.ehelpdesk.dbo.employee i on i.emp_no = c.emp_no and i.is_active = 1
+				left join hris_mainLogin i on i.temp_pass = c.emp_no
 				" . $l_Join . "
 				where a.controlno = '" . $_POST['controlno'] . "' ";
 
@@ -2143,9 +2414,13 @@ if ($_SERVER['HTTP_AUTORIZATION']) {
             //remove this section (this is for auto sending of mail)
             $mailer = new Mailer();
             $mailer_from = $mailer->get_sender($employee['emp_no']);
+            $mailer_to = $mailer->get_recipient($employee['emp_no']);
+            $test_mail_to[0]['email'] = "marvin.orsua@ever.ph";
+            $test_mail_from[0]['email'] = "marvin.orsua@ever.ph";
             $table = $mailer->get_table($control_no);
             $reqmail = $mailer->get_recipient_approve($control_no, $table);
-            $mailer_send = $mailer->mailformat_approve($reqname, $leave_type, $date_filed, $control_no, $branch, $lceff_date, $reason, $mailer_from, $reqmail, $reqstat);
+            // $mailer_send = $mailer->mailformat_approve($reqname, $leave_type, $date_filed, $control_no, $branch, $lceff_date, $reason, $mailer_from, $reqmail, $reqstat);
+            $mailer_send = $mailer->mailformat_approve($reqname, $leave_type, $date_filed, $control_no, $branch, $lceff_date, $reason, $test_mail_from, $test_mail_to, $reqstat);
 
             echo json_encode($response);
             die();
@@ -2171,7 +2446,7 @@ if ($_SERVER['HTTP_AUTORIZATION']) {
                left join hris_mainLogIn f on c.emp_no =  f.temp_pass
                left join ref_department g on g.br_code = d.br_code and g.div_code = d.div_code and g.dept_code = d.dept_code
                left join ref_branch h on g.br_code = h.br_code
-               left join eversql.ehelpdesk.dbo.employee i on i.emp_no = c.emp_no and i.is_active = 1
+               left join hris_mainLogin i on i.temp_pass = c.emp_no
                " . $l_Join . "
                where a.controlno = '" . $_POST['controlno'] . "' ";
 
@@ -2186,20 +2461,30 @@ if ($_SERVER['HTTP_AUTORIZATION']) {
                $reqdate = $reqstat->reqdate;
             }
 
-
             $leave_type = trim($reqleavename);
-            $date_filed = $dateFiled;
+            $date_filed = $dateFiled->date;
             $control_no = $_POST['controlno'];
             $lceff_date = $reqdate;
             $reqstat   = trim($reStat);
             $branch     = strtoupper($reqbr);
             $reason    = '<strong>' . trim($lCancelReq) . '</strong>';
 
-            $mailer = new Mailer();
-            $mailer_from = $mailer->get_sender($employee['emp_no']);
-            $table = $mailer->get_table($control_no);
-            $reqmail = $mailer->get_recipient_approve($control_no, $table);
-            $mailer_send = $mailer->mailformat_approve($reqname, $leave_type, $date_filed, $control_no, $branch, $lceff_date, $reason, $mailer_from, $reqmail, $reqstat);
+            try {
+               $mailer = new Mailer();
+               $mailer_from = $mailer->get_sender($employee['emp_no']);
+
+               $mailer_to = $mailer->get_recipient($employee['emp_no']);
+               $test_mail_to[0]['email'] = "marvin.orsua@ever.ph";
+               $test_mail_from[0]['email'] = "marvin.orsua@ever.ph";
+               $table = $mailer->get_table($control_no);
+
+               $reqmail = $mailer->get_recipient_approve($control_no, $table);
+               // $mailer_send = $mailer->mailformat_approve($reqname, $leave_type, $date_filed, $control_no, $branch, $lceff_date, $reason, $mailer_from, $test_mail_to, $reqmail, $reqstat);
+               $mailer_send = $mailer->mailformat_approve($reqname, $leave_type, $date_filed, $control_no, $branch, $lceff_date, $reason, $test_mail_from, $test_mail_to, $reqstat);
+            } catch (\Throwable $th) {
+               $response['error'] = true;
+               $response['message'] = $th;
+            }
          }
       }
       if ($_POST['action'] == 'gethistoryuserlist') {
@@ -2214,7 +2499,7 @@ if ($_SERVER['HTTP_AUTORIZATION']) {
                $aSearch = '%';
             } else if ($aSearch === '') {
                $resulta['status'] = 'error';
-               $resulta['status_message'] = "No Records Found!</br>Type 'All' to view all handled requesting personnel or type specific name, lastname or employee number to search individual...";
+               $resulta['message'] = "No Records Found!</br>Type 'All' to view all handled requesting personnel or type specific name, lastname or employee number to search individual...";
                echo json_encode($resulta);
                die();
             }
@@ -2305,7 +2590,7 @@ if ($_SERVER['HTTP_AUTORIZATION']) {
 
                default:
                   $response['status'] = 'error';
-                  $response['status_message'] = "No Requests Found!(for approval)...";
+                  $response['message'] = "No Requests Found!(for approval)...";
                   echo json_encode($response);
                   die();
             }

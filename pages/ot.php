@@ -137,7 +137,7 @@
                </div>
             </form>
             <div class="row" style="padding: 10px 2rem; text-align:right">
-               <button type="button" class="btn btn-success" style="width:100%" onclick="submitRequest()">Submit</button>
+               <button type="button" class="btn btn-success" style="width:100%" onclick="submitRequest(e)">Submit</button>
             </div>
          </div>
       </div>
@@ -202,10 +202,11 @@
          return true
       }
    }
-
-   async function submitRequest() {
+   async function submitRequest(e) {
 
       if (checkFields()) {
+         e.innerText = "Please wait ... Loading"
+         e.setAttribute('disabled', '')
          let remarks = $('textarea[name="txtRemarks"]').val();
          const response = await fetch("../controller/transactionController.php", {
             method: "POST",
@@ -213,7 +214,7 @@
                'Content-type': 'application/x-www-form-urlencoded',
                'Autorization': `Bearer ${$('#token').html()}`
             },
-            body: $('#OUEform').serialize() + `&action=OUE`
+            body: $('#OUEform').serialize() + `&action=OUE&emp_no=${$('#select_branchemp').val() ? $('#select_branchemp').val() : '' }`
          })
          const {
             error,
@@ -222,9 +223,14 @@
          if (error) {
             $('#errormsg').html(message)
             $('.alert-danger').show()
+            e.innerText = "Submit"
+            e.removeAttribute('disabled')
          } else {
             $('#successmsg').html(message)
             $('.alert-success').show()
+            e.innerText = "Submit"
+            e.removeAttribute('disabled')
+
          }
       }
 

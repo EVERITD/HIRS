@@ -37,7 +37,7 @@
                      <tbody>
                         <tr>
                            <td style="font-size: 13px!important;font-weight:bold;border-right:1px solid black;">VL</td>
-                           <td id="earnvldays">1</td>
+                           <td id="earnvldays">0</td>
                            <td style="border-right:1px solid black;" id="earnvlhrs">0</td>
                            <td id="filedvldays"></td>
                            <td id="filedvlhrs" style="border-right:1px solid black;">0</td>
@@ -123,7 +123,7 @@
 <link rel="stylesheet" type="text/css" href="//cdn.jsdelivr.net/bootstrap.daterangepicker/2/daterangepicker.css" />
 
 <script>
-   // getpostedtransactions()
+   getpostedtransactions()
    $('.alert-success').hide()
    $('.alert-danger').hide()
    async function getpostedtransactions() {
@@ -135,11 +135,12 @@
          body: `empno=${$('#emp_no').html()}&action=postedtransactions`
       })
       const data = await response.json();
+      console.log(data)
       if (data) {
-         $('#vld').html(data['vld'])
-         $('#vlh').html(data['vlh'])
-         $('#sld').html(data['vld'])
-         $('#slh').html(data['vlh'])
+         $('#vld').html(data['vld'] ? data['vld'] : 0)
+         $('#vlh').html(data['vlh'] ? data['vlh'] : 0)
+         $('#sld').html(data['sld'] ? data['sld'] : 0)
+         $('#slh').html(data['slh'] ? data['slh'] : 0)
          $('#pl').html(data['pl'] ? data['pl'] : 0)
          $('#ml').html(data['ml'] ? data['ml'] : 0)
       }

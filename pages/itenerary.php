@@ -83,7 +83,7 @@
                   </div>
                </div>
                <div class="row" style="padding: 10px 2rem; text-align:right">
-                  <button type="button" class="btn btn-success" style="width:250px" onclick="submitReq()">Submit</button>
+                  <button type="button" class="btn btn-success" style="width:250px" onclick="submitReq(e)">Submit</button>
                </div>
             </form>
          </div>
@@ -126,7 +126,9 @@
       $('#selecthrs').css()
    }
 
-   async function submitReq() {
+   async function submitReq(e) {
+      e.innerText = "Please wait ... Loading"
+      e.setAttribute('disabled', '')
       let xdata = $('#iarform').serialize()
       const response = await fetch("../controller/transactionController.php", {
          method: 'POST',
@@ -143,9 +145,14 @@
       if (error) {
          $('#errormsg').html(message)
          $('.alert-danger').show()
+         e.innerText = "Submit"
+         e.removeAttribute('disabled')
       } else {
          $('#successmsg').html(message)
          $('.alert-success').show()
+         e.innerText = "Submit"
+         e.removeAttribute('disabled')
+
       }
    }
 </script>

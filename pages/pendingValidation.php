@@ -112,7 +112,6 @@
          body: 'action=FORVALIDATION'
       })
       const data = await response.json();
-      console.log(data)
    }
    // getOt()
 </script>

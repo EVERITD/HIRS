@@ -104,7 +104,7 @@
                   </div>
                </div>
                <div class="row" style="padding: 10px 2rem; text-align:right">
-                  <button type="button" class="btn btn-success" style="width:100%" onclick="submitReq()">Submit</button>
+                  <button type="button" class="btn btn-success" style="width:100%" onclick="submitReq(this)">Submit</button>
                </div>
             </div>
          </form>
@@ -162,14 +162,16 @@
 
 
 
-   async function submitReq() {
+   async function submitReq(e) {
+      e.innerText = "Please wait ... Loading"
+      e.setAttribute('disabled', '')
       const response = await fetch("../controller/transactionController.php", {
          method: "POST",
          headers: {
             'Content-type': 'application/x-www-form-urlencoded',
             'Autorization': `Bearer ${$('#token').html()}`
          },
-         body: $('#form_changework').serialize() + '&action=CHANGEOFWORKSCHED'
+         body: $('#form_changework').serialize() + `&action=CHANGEOFWORKSCHED&emp_no=${$('#select_branchemp').val() ? $('#select_branchemp').val() : '' }`
       })
       const {
          error,
@@ -178,9 +180,13 @@
       if (error) {
          $('#errormsg').html(message)
          $('.alert-danger').show()
+         e.innerText = "Submit"
+         e.removeAttribute('disabled')
       } else {
          $('#successmsg').html(message)
          $('.alert-success').show()
+         e.innerText = "Submit"
+         e.removeAttribute('disabled')
       }
 
    }

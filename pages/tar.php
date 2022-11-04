@@ -85,7 +85,7 @@
                </div>
             </form>
             <div class="row" style="padding: 10px 2rem; text-align:right">
-               <button type="button" class="btn btn-success" style="width:100%" onclick="submitrequest()">Submit</button>
+               <button type="button" class="btn btn-success" style="width:100%" onclick="submitrequest(this)">Submit</button>
             </div>
          </div>
       </div>
@@ -111,16 +111,21 @@
 <?php require '../layout/footer.php' ?>
 <script>
    $('input[name="dates"]').daterangepicker();
-   async function submitrequest() {
+   async function submitrequest(e) {
       if (checkInputFields(['#effdte', '#floatingTextarea'])) {
+         e.innerText = "Please wait ... Loading"
+         e.setAttribute('disabled', '')
          const response = await fetch("../controller/transactionController.php", {
             method: "POST",
             headers: {
                'Content-type': 'application/x-www-form-urlencoded',
                'Autorization': `Bearer ${$('#token').html()}`
             },
-            body: $('#tarform').serialize() + '&action=TAR'
+            body: $('#tarform').serialize() + `&action=TAR&emp_no=${$('#select_branchemp').val() ? $('#select_branchemp').val() : '' }`
          })
+
+
+
          const {
             error,
             message
@@ -128,9 +133,13 @@
          if (error) {
             $('#errormsg').html(message)
             $('.alert-danger').show()
+            e.innerText = "Submit"
+            e.removeAttribute('disabled')
          } else {
             $('#successmsg').html(message)
             $('.alert-success').show()
+            e.innerText = "Submit"
+            e.removeAttribute('disabled')
          }
       } else {
          alert("check fields")

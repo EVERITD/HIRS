@@ -10,7 +10,9 @@ try {
    if ($conn) {
       return $conn;
    } else {
-      echo "Connection could not be established.<br />";
+      $response['error'] = true;
+      $response['message'] = "Unable to connect to database. Please try again";
+      echo json_encode($response);
       die();
    }
 } catch (PDOException $e) {

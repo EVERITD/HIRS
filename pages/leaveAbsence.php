@@ -41,7 +41,7 @@
                </div>
             </div>
             <div class="row" style="padding: 10px 2rem; text-align:right">
-               <button type="button" class="btn btn-success" style="width:100%" onclick="submitLeave()">Submit</button>
+               <button type="button" class="btn btn-success" style="width:100%" onclick="submitLeave(this)">Submit</button>
             </div>
          </div>
       </div>
@@ -67,7 +67,9 @@
 <script>
    $('input[name="dates"]').daterangepicker();
 
-   async function submitLeave() {
+   async function submitLeave(e) {
+      e.innerText = "Please wait ... Loading"
+      e.setAttribute('disabled', '')
       let remarks = $('textarea[name="txtRemarks"]').val();
       let endDate = $('#dates').data('daterangepicker').endDate.format("YYYY-MM-DD");
       let startDate = $('#dates').data('daterangepicker').startDate.format("YYYY-MM-DD");
@@ -80,21 +82,23 @@
             'Autorization': `Bearer ${$('#token').html()}`
          },
          method: 'POST',
-         body: `action=LeaveOfAbsence&remarks=${remarks}&dtefrm=${startDate}&dteto=${endDate}&isAuthorized=LOAA&request_type=leave_of_absence`
+         body: `action=LeaveOfAbsence&remarks=${remarks}&dtefrm=${startDate}&dteto=${endDate}&emp_no=${$('#select_branchemp').val() ? $('#select_branchemp').val() : '' }&isAuthorized=LOAA&request_type=leave_of_absence`
       })
       const {
          error,
          message
       } = await response.json()
       if (error) {
-
          $('#errormsg').html(message)
          $('.alert-danger').show()
+         e.innerText = "Submit"
+         e.removeAttribute('disabled')
       } else {
          $('#successmsg').html(message)
          $('.alert-success').show()
-
+         e.innerText = "Submit"
+         e.removeAttribute('disabled')
       }
-      // if(data)
+
    }
 </script>

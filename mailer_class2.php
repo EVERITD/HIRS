@@ -188,12 +188,19 @@ class Mailer
 
 		require 'phpmailer/PHPMailerAutoload.php';
 		$mail = new PHPMailer;
-
-		// $mail->isSMTP();
-		$mail->SMTPAuth = true;                              // Set mailer to use SMTP
-		$mail->Host = '192.168.16.35';  							// Specify main and backup SMTP servers
+		$mail->SMTPDebug = 0;
+		$mail->isSMTP();
+		$mail->SMTPAuth = true;                              	// Set mailer to use SMTP
+		$mail->Host = '192.168.16.35';  								// Specify main and backup SMTP servers
 		$mail->SMTPSecure = 'TLS';                            // Enable TLS encryption, `ssl` also
 		$mail->Port = 25;
+		$mail->SMTPOptions = array(
+			'ssl' => array(
+				'verify_peer' => false,
+				'verify_peer_name' => false,
+				'allow_self_signed' => true
+			)
+		);
 		foreach ($mailerfr as $key_fr => $values_fr) {
 			foreach ($values_fr as $email_fr => $user_email_fr) {
 				$userfrm = trim($user_email_fr);
@@ -389,14 +396,18 @@ class Mailer
 			$table = $value->tablename;
 		}
 
-		$sql_recipient_app = "select email from HO_PIS.eversql.ehelpdesk.dbo.employee where emp_no in (select emp_no from {$table} where controlno = '{$param1}') ";
+		// $sql_recipient_app = "select email from HO_PIS.eversql.ehelpdesk.dbo.employee where emp_no in (select emp_no from {$table} where controlno = '{$param1}') ";.
+
+		//MARVIN 04/11/2022
+		$sql_recipient_app = "select email from hris_mainLogin where temp_pass in (select emp_no from {$table} where controlno = '{$param1}') ";
+		//
 		// $rs_recipient_app = mssql_query($sql_recipient_app);
 		// $nm_row = mssql_num_rows($rs_recipient_app);
 		$rs_recipient_app = sqlsrv_query($this->conn, $sql_recipient_app);
 		$nm_row = sqlsrv_num_fields($rs_recipient_app);
 
 		if ($nm_row > 0) {
-			// while ($row_recipient_app = mssql_fetch_object($rs_recipient_app)) {
+			// while ($row_recipient_app = mssql_fetch_obHO_PIS.eversql.ehelpdesk.dbo.employeeject($rs_recipient_app)) {
 			while ($row_recipient_app = sqlsrv_fetch_object($rs_recipient_app)) {
 				$email_recipient_app[] = $row_recipient_app;
 			}
@@ -410,7 +421,12 @@ class Mailer
 
 	public function get_bcc()
 	{
-		$sql_bcc = "select email from HO_PIS.eversql.ehelpdesk.dbo.employee where emp_no = '9900628' ";
+		// $sql_bcc = "select email from HO_PIS.eversql.ehelpdesk.dbo.employee where emp_no = '9900628' ";
+
+		//MARVIN 04/11/2022
+		$sql_bcc = "select email from hirs_mainLogin where emp_no = '9900628' ";
+		//
+
 		// $rs_bcc = mssql_query($sql_bcc);
 		// $nm_row = mssql_num_rows($rs_bcc);
 		$rs_bcc = sqlsrv_query($this->conn, $sql_bcc);

@@ -259,7 +259,7 @@ $USER = $_SESSION['user']['user_name'];
          },
          success: function(result) {
             if (result.status == 1) {
-               window.open("http://localhost/PISREPORTS_CW/otreport.php", "_blank");
+               window.open(`http://localhost/PISREPORTS_CW/otreport.php?user=${username}`, "_blank");
             }
          },
          error: function(err) {
@@ -281,9 +281,8 @@ $USER = $_SESSION['user']['user_name'];
             username: username,
          },
          success: function(result) {
-            console.log(result);
             if (result.status == 1) {
-               window.open("http://localhost/PISREPORTS_CW/overtime.php", "_blank");
+               window.open(`http://localhost/PISREPORTS_CW/overtime.php?user=${username}`, "_blank");
             }
          },
          error: function() {
