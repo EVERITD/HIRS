@@ -2403,7 +2403,7 @@ if ($_SERVER['HTTP_AUTORIZATION']) {
             }
 
             $leave_type = trim($reqleavename);
-            $date_filed = $dateFiled;
+            $date_filed = $dateFiled->date;
             $control_no = $_POST['controlno'];
             $lceff_date = $reqdate;
             $reqstat   = trim($reStat);
@@ -2462,7 +2462,7 @@ if ($_SERVER['HTTP_AUTORIZATION']) {
             }
 
             $leave_type = trim($reqleavename);
-            $date_filed = $dateFiled->date;
+            $date_filed = $dateFiled;
             $control_no = $_POST['controlno'];
             $lceff_date = $reqdate;
             $reqstat   = trim($reStat);

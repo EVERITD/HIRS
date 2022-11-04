@@ -1,5 +1,6 @@
 <?php
 require '../layout/header.php';
+header('Location: requests.php')
 ?>
 <div class="row">
    <div class="col-3">

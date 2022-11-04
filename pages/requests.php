@@ -105,21 +105,8 @@
             });
 
 
-            // $('#deleteBtn').hover(() => {
-            //    if ($('#deleteBtn').hasClass('bi-folder-x')) {
-            //       console.log('here')
-            //       $('#deleteBtn').removeClass('bi-folder-x')
-            //       $('#deleteBtn').addClass('bi-folder-minus')
-            //    } else {
-            //       console.log('there')
-            //       $('#deleteBtn').removeClass('bi-folder-minus')
-            //       $('#deleteBtn').addClass('bi-folder-x')
-            //    }
-
-            // })
          },
          "error": (err) => {
-            console.log(err)
             requestTable.row.add([
                `-`,
                '-',

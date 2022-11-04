@@ -22,8 +22,8 @@
          <div class="col-6 d-flex" style="background-color:#b82525;align-items:center;justify-content:center">
             <img src="../assets/download3.png?v<?php echo time(); ?>" alt="" srcset="" style="width: 250px">
          </div>
-         <div class="col-6" style="display:flex; align-items:center; justify-content:center; background-image: url('../assets/undraw.png'); background-size:100%; background-repeat:no-repeat; background-position:8rem 10rem;">
-            <div class="row loginform" style="width: 280px; padding: 2rem 1rem; box-shadow: 2px 3px 13px -3px rgba(0,0,0,0.45);border-radius: 3px;background-color:white">
+         <div class="col-6" style="display:flex; align-items:center; justify-content:center;  background-size:100%; background-repeat:no-repeat; background-position:8rem 10rem;">
+            <div class="row loginform" style="width: 450px; padding: 2rem 1rem;background-color:white">
                <div class="col-12" style="text-align: left;">
                   <h3 style="font-weight: bold;line-height:25px">Welcome to Ever HR-FORMS Portal</h3>
                   <p style="font-size: 11px;line-height:10px;font-weight:normal">Let's get you ready. Please enter your username and password</p>
@@ -32,11 +32,11 @@
                <form id="loginForm">
                   <div class="col-12">
                      <label for="inputEmail4" class="form-label" style="font-weight: bold;">Username :</label>
-                     <input type="email" class="form-control" id="inputEmail4" name="data[email]">
+                     <input type="email" class="form-control" id="inputEmail4" name="data[email]" style="text-align: center;">
                   </div>
                   <div class="col-12">
                      <label for="inputEmail4" class="form-label" style="font-weight: bold;">Password :</label>
-                     <input type="password" class="form-control" id="inputEmail4" name="data[password]" onkeypress="console.log(this)">
+                     <input type="password" class="form-control" id="inputEmail4" name="data[password]" onkeypress="handleEnter(event)" style="text-align: center;">
                   </div>
                   <div class="col-12" style="margin: 10px 0;">
                      <button type="button" class="btn btn-success" style="width: 100%;" onclick="login()">Log In</button>
@@ -52,6 +52,12 @@
          $(document).ready(() => {
             console.log('ready')
          })
+
+         function handleEnter(e) {
+            if (e.key == "Enter") {
+               login()
+            }
+         }
 
          async function login() {
             let formdata = $('#loginForm').serialize()

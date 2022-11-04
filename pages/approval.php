@@ -90,7 +90,7 @@
                </div>
                <div class="modal-footer">
                   <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
-                  <button type="button" class="btn btn-primary" onclick="submitdisapprove()">Submit</button>
+                  <button type="button" class="btn btn-primary" onclick="submitdisapprove()" data-bs-dismiss="modal">Submit</button>
                </div>
             </div>
          </div>
@@ -121,7 +121,6 @@
             data,
             error
          }) => {
-            console.log(data)
             if (error) {
                requestTable.row.add([
                   '-',
@@ -133,9 +132,9 @@
                   '-',
                ]).draw(false)
             } else {
+               requestTable.clear()
                data.forEach(item => {
                   let name = item['NAME'].replace('()', '')
-
                   requestTable.row.add([
                      `${item['controlno']}`,
                      `${item['encoded_date']}`,
@@ -181,6 +180,7 @@
          $('#successmsg').html(message)
          $('.alert-success').show()
       }
+      $('#table_id').DataTable().ajax.reload();
    }
 
    function handleShowReason(controlno, name) {
@@ -207,7 +207,9 @@
       } else {
          $('#successmsg').html(message)
          $('.alert-success').show()
+
       }
+      $('#table_id').DataTable().ajax.reload();
    }
 
    // getData()
