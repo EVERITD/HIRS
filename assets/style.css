@@ -9,4 +9,8 @@ label, p, button, input {
   font-size: 11px !important;
 }
 
+.alert button {
+  padding: 5px;
+}
+
 /*# sourceMappingURL=style.css.map */
