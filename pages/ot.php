@@ -137,7 +137,7 @@
                </div>
             </form>
             <div class="row" style="padding: 10px 2rem; text-align:right">
-               <button type="button" class="btn btn-success" style="width:100%" onclick="submitRequest(e)">Submit</button>
+               <button type="button" class="btn btn-success" style="width:100%" onclick="submitRequest(this)">Submit</button>
             </div>
          </div>
       </div>

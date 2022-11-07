@@ -37,12 +37,12 @@
                      <tbody>
                         <tr>
                            <td style="font-size: 13px!important;font-weight:bold;border-right:1px solid black;">VL</td>
-                           <td id="earnvldays">0</td>
-                           <td style="border-right:1px solid black;" id="earnvlhrs">0</td>
-                           <td id="filedvldays"></td>
-                           <td id="filedvlhrs" style="border-right:1px solid black;">0</td>
-                           <td id="balvldays">0</td>
-                           <td id="balvlhrs">0</td>
+                           <td id="earnvldays">Loading</td>
+                           <td style="border-right:1px solid black;" id="earnvlhrs">Loading</td>
+                           <td id="filedvldays">Loading</td>
+                           <td id="filedvlhrs" style="border-right:1px solid black;">Loading</td>
+                           <td id="balvldays">Loading</td>
+                           <td id="balvlhrs">Loading</td>
                         </tr>
                         <tr>
                            <td style="font-size: 13px!important;font-weight:bold;border-right:1px solid black;">SL</td>
@@ -100,8 +100,8 @@
                <div class="" style="display: flex; justify-content:center">
                   <div class="approver_detail">
                      <i class="bi bi-person-badge" style="font-size:  45px;"></i>
-                     <p style="font-weight: bold; text-transform:uppercase; margin:0; font-size:14px!important;margin-top:10px; border-bottom: 2px solid black" id="apprv_name"></p>
-                     <p style="font-weight: bold; text-transform:uppercase;" id="apprv_pos">IT Software Manager</p>
+                     <p style="font-weight: bold; text-transform:uppercase; margin:0; font-size:14px!important;margin-top:10px; border-bottom: 2px solid black" id="apprv_name">Loading . . .</p>
+                     <p style="font-weight: bold; text-transform:uppercase;" id="apprv_pos">Loading . . . </p>
                   </div>
                </div>
 

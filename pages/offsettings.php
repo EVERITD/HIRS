@@ -309,7 +309,6 @@
       switch ($("input[name='data[filetype]']:checked").val().toUpperCase()) {
          case "UNDERTIME":
             let ottime = $('#select_ot_appy').find(":selected").children()[3].innerText
-
             if (parseFloat(tobefiled.replace(':', '.')) > parseFloat(ottime.replace(':', '.'))) {
                $('#errormsg').html("Unable to continue. Please check HOUR[FROM] AND HOUR[TO] and compare to selected OT to offset")
                $('.alert-danger').show()
@@ -392,9 +391,11 @@
       })
       const {
          message,
-         error
+         error,
+         data
       } = await response.json();
       if (error) {
+         console.log('test')
          alert(message)
          return false
       }

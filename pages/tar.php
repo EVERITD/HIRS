@@ -113,36 +113,50 @@
    $('input[name="dates"]').daterangepicker();
    async function submitrequest(e) {
       if (checkInputFields(['#effdte', '#floatingTextarea'])) {
-         e.innerText = "Please wait ... Loading"
-         e.setAttribute('disabled', '')
-         const response = await fetch("../controller/transactionController.php", {
-            method: "POST",
-            headers: {
-               'Content-type': 'application/x-www-form-urlencoded',
-               'Autorization': `Bearer ${$('#token').html()}`
-            },
-            body: $('#tarform').serialize() + `&action=TAR&emp_no=${$('#select_branchemp').val() ? $('#select_branchemp').val() : '' }`
-         })
+         // e.innerText = "Please wait ... Loading"
+         // e.setAttribute('disabled', '')
 
+         if (!validateTime($('input[name="data[timein]"]').val(), $('input[name="data[timeout]"]').val()) && !validateTime($('input[name="data[lbOut]"]').val(), $('input[name="data[lbIn]"]').val()) &&
+            !validateTime($('input[name="data[cbOut]"]').val(), $('input[name="data[cbIn]"]').val())) {
+            const response = await fetch("../controller/transactionController.php", {
+               method: "POST",
+               headers: {
+                  'Content-type': 'application/x-www-form-urlencoded',
+                  'Autorization': `Bearer ${$('#token').html()}`
+               },
+               body: $('#tarform').serialize() + `&action=TAR&emp_no=${$('#select_branchemp').val() ? $('#select_branchemp').val() : '' }`
+            })
 
-
-         const {
-            error,
-            message
-         } = await response.json();
-         if (error) {
-            $('#errormsg').html(message)
-            $('.alert-danger').show()
-            e.innerText = "Submit"
-            e.removeAttribute('disabled')
+            const {
+               error,
+               message
+            } = await response.json();
+            if (error) {
+               $('#errormsg').html(message)
+               $('.alert-danger').show()
+               e.innerText = "Submit"
+               e.removeAttribute('disabled')
+            } else {
+               $('#successmsg').html(message)
+               $('.alert-success').show()
+               e.innerText = "Submit"
+               e.removeAttribute('disabled')
+            }
          } else {
-            $('#successmsg').html(message)
-            $('.alert-success').show()
-            e.innerText = "Submit"
-            e.removeAttribute('disabled')
+            alert("Please review the time fields.")
          }
       } else {
-         alert("check fields")
+         alert("Please review fields")
+      }
+   }
+
+
+   function validateTime(time1, time2) {
+
+      if (time1 > time2) {
+         return false
+      } else {
+         return true
       }
    }
 </script>

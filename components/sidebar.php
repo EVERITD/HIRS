@@ -62,7 +62,7 @@ $USER = $_SESSION['user']['user_name'];
    <div class="" style="background-color:brown; height:40px">
       <div class="logo d-flex" style="height: 100%; align-items:center">
          <img src="../assets/download2.png" alt="" style="height: 100%;">
-         <p style="margin: 0 10px; color:white;">Personal Information System</p>
+         <p style="margin: 0 10px; color:white;">HR-FORMS Commonwealth</p>
       </div>
    </div>
    <div class="offcanvas-header" style="display: flex;align-items:center; justify-content:center; flex-direction:column;padding:1rem 0!important;">

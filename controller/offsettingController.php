@@ -22,13 +22,17 @@ if ($_SERVER['HTTP_AUTORIZATION']) {
          $result = 0;
          if (sqlsrv_fetch($stmt)) {
             $result = $ref_schedule->bindMetaData($stmt);
-            $continue = false;
+            $continue = true;
             if ($result['work_hrs_aday'] < $data) {
+               $continue = false;
                $response['error'] = true;
                $response['status'] = 503;
+               $response['data'] = '';
                $response['message'] = "Cannot proceed with request. Your current work schedule for a day is lower than the desired total overtime to be used.";
-            }
-            if ($continue) {
+            } else {
+               $response['error'] = false;
+               $response['status'] = 200;
+               $response['data'] = $result['work_hrs_aday'];
             }
          } else {
             $response['error'] = true;
