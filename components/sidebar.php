@@ -56,7 +56,6 @@
 $PInfo = $_SESSION['emp_details'];
 $Approver = $_SESSION['Approver'];
 $USER = $_SESSION['user']['user_name'];
-
 ?>
 <div class="offcanvas offcanvas-start " id="offcanvasExample" aria-labelledby="offcanvasExampleLabel" data-bs-backdrop="false" style="width: 350px; visibility:visible;transform: translateX(0%)">
    <div class="" style="background-color:brown; height:40px">
@@ -119,9 +118,9 @@ $USER = $_SESSION['user']['user_name'];
 
 
             if ($PInfo['id_prefix'] == '99' || $PInfo['id_prefix'] == '58') {
-               echo ` <a id="listItem" href="attendance.php" class="list-group-item list-group-item-action" aria-current="true">
+               echo '<a id="listItem" href="attendance.php" class="list-group-item list-group-item-action" aria-current="true">
                   <p style="margin: 0; font-weight:bold;text-transform:uppercase"><i class="bi bi-person-video2" style="font-size: 15px;"></i>&nbsp;&nbsp;&nbsp;Attendance</p>
-               </a>`;
+               </a>';
             }
 
 
